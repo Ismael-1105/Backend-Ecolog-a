@@ -1,10 +1,16 @@
+const tokenService = require('../services/tokenService');
+const ErrorResponse = require('../utils/ErrorResponse');
+const logger = require('../config/logger');
 
-const jwt = require('jsonwebtoken');
-
+/**
+ * Authentication Middleware
+ * Verifies JWT access token and attaches user to request
+ */
 module.exports = function (req, res, next) {
     // Get token from header (support Authorization: Bearer and x-auth-token)
     let token = null;
     const authHeader = req.header('authorization') || req.header('Authorization');
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7);
     } else {
@@ -12,17 +18,29 @@ module.exports = function (req, res, next) {
     }
 
     if (!token) {
-        return res.status(401).json({ message: 'Authorization token missing' });
-    }
-    if (!process.env.JWT_SECRET) {
-        return res.status(500).json({ message: 'Server misconfiguration: missing JWT secret' });
+        return next(ErrorResponse.unauthorized('Authorization token missing', 'TOKEN_MISSING'));
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        // Verify token using token service
+        const decoded = tokenService.verifyAccessToken(token);
         req.user = decoded.user;
+
+        // Log successful authentication
+        logger.debug('User authenticated', {
+            userId: req.user.id,
+            role: req.user.role,
+            path: req.path,
+        });
+
         next();
     } catch (err) {
-        return res.status(401).json({ message: 'Invalid token' });
+        logger.warn('Authentication failed', {
+            error: err.message,
+            path: req.path,
+            ip: req.ip,
+        });
+
+        return next(err);
     }
 };

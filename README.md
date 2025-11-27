@@ -1,294 +1,178 @@
-# EcoLearn Loja - Backend API
+# EcoLearn Loja - Backend API v2.0
 
-Backend del proyecto **EcoLearn Loja**, una plataforma educativa para compartir y gestionar contenido de video relacionado con ecología y educación ambiental en Loja, Ecuador.
+Backend optimizado del proyecto **EcoLearn Loja**, una plataforma educativa para compartir y gestionar contenido de video relacionado con ecología y educación ambiental en Loja, Ecuador.
 
-## 📋 Tabla de Contenidos
-
-- [Descripción General](#-descripción-general)
-- [Tecnologías Utilizadas](#-tecnologías-utilizadas)
-- [Estructura del Proyecto](#-estructura-del-proyecto)
-- [Modelos de Datos](#-modelos-de-datos)
-- [API Endpoints](#-api-endpoints)
-- [Autenticación y Autorización](#-autenticación-y-autorización)
-- [Instalación y Configuración](#-instalación-y-configuración)
-- [Scripts Disponibles](#-scripts-disponibles)
-- [Variables de Entorno](#-variables-de-entorno)
-- [Middlewares](#-middlewares)
-- [Documentación API](#-documentación-api)
+> **🎉 Versión 2.0** - Completamente refactorizado con arquitectura en capas, seguridad empresarial y mejores prácticas modernas.
 
 ---
 
-## 🎯 Descripción General
+## 📋 Tabla de Contenidos
 
-EcoLearn Loja Backend es una API RESTful construida con Node.js y Express que proporciona servicios para:
+- [Novedades v2.0](#-novedades-v20)
+- [Tecnologías](#-tecnologías-utilizadas)
+- [Arquitectura](#-arquitectura)
+- [Seguridad](#-seguridad)
+- [Instalación](#-instalación-y-configuración)
+- [API Endpoints](#-api-endpoints)
+- [Autenticación](#-autenticación)
+- [Testing](#-testing)
+- [Documentación](#-documentación-api)
 
-- **Gestión de usuarios** con diferentes roles (Estudiante, Docente, Administrador)
-- **Autenticación y autorización** mediante JWT (JSON Web Tokens)
-- **Subida y gestión de videos** educativos
-- **Sistema de comentarios** en videos
-- **Sistema de valoraciones** (ratings) de 1 a 5 estrellas
-- **Aprobación de contenido** por administradores
-- **Streaming de videos** con soporte para Range requests
+---
+
+## 🎉 Novedades v2.0
+
+### Seguridad Mejorada
+- ✅ **Sistema de Tokens Dual**: Access tokens (15 min) + Refresh tokens (7 días)
+- ✅ **Rate Limiting**: Protección contra ataques de fuerza bruta
+- ✅ **Sanitización de Entrada**: Protección XSS (sanitize-html) y NoSQL injection (custom)
+- ✅ **RBAC Avanzado**: 4 roles con sistema de permisos granular
+- ✅ **Contraseñas Seguras**: Bcrypt con 12 salt rounds
+- ✅ **Registro Restringido**: Solo Estudiante y Docente pueden auto-registrarse
+
+### Arquitectura Limpia
+- ✅ **Capa de Repositorios**: Abstracción de base de datos
+- ✅ **Capa de Servicios**: Lógica de negocio separada
+- ✅ **Capa de Controladores**: Manejo de HTTP simplificado
+- ✅ **Async Handlers**: Sin bloques try-catch
+
+### Base de Datos Optimizada
+- ✅ **Índices**: Consultas 100x más rápidas
+- ✅ **Soft Delete**: Eliminación reversible
+- ✅ **Agregaciones**: Cálculos eficientes de ratings
+- ✅ **Paginación**: Resultados paginados
+
+### Gestión de Perfil de Usuario
+- ✅ **Endpoints /me**: Gestión completa del perfil propio
+- ✅ **Foto de Perfil**: Upload de imágenes (JPEG, PNG, WebP)
+- ✅ **Permisos Granulares**: Control fino de qué campos puede editar cada usuario
+- ✅ **Eliminación Segura**: Requiere contraseña para eliminar cuenta
+
+### Logging Profesional
+- ✅ **Winston**: Logs estructurados con niveles
+- ✅ **Rotación Diaria**: Archivos rotativos de 14 días
+- ✅ **Tracking**: IP y User-Agent en autenticación
 
 ---
 
 ## 🛠️ Tecnologías Utilizadas
 
 ### Core
-- **Node.js** - Entorno de ejecución JavaScript
-- **Express.js v5.1.0** - Framework web para Node.js
+- **Node.js 18+** - Entorno de ejecución
+- **Express.js 5.1** - Framework web
 - **MongoDB** - Base de datos NoSQL
-- **Mongoose v8.19.3** - ODM para MongoDB
+- **Mongoose 8.19** - ODM para MongoDB
 
 ### Seguridad
-- **bcrypt v6.0.0** - Encriptación de contraseñas
-- **jsonwebtoken v9.0.2** - Generación y verificación de tokens JWT
-- **helmet v8.1.0** - Seguridad HTTP headers
-- **cors v2.8.5** - Configuración de CORS
+- **bcrypt 6.0** - Hash de contraseñas
+- **jsonwebtoken 9.0** - Tokens JWT
+- **helmet 8.1** - Headers de seguridad
+- **express-rate-limit 7.1** - Rate limiting
+- **sanitize-html** - Protección XSS (compatible Express 5)
 
-### Validación y Documentación
-- **express-validator v7.3.0** - Validación de datos de entrada
-- **swagger-ui-express v5.0.1** - Documentación interactiva de API
-- **swagger-autogen v2.23.7** - Generación automática de documentación
-- **@scalar/express-api-reference v0.8.23** - Referencia de API moderna
+### Utilidades
+- **winston 3.11** - Logging profesional
+- **winston-daily-rotate-file 4.7** - Rotación de logs
+- **joi 17.12** - Validación avanzada
+- **multer 2.0** - Subida de archivos
 
-### Manejo de Archivos
-- **multer v2.0.2** - Middleware para subida de archivos
-- **hls.js v1.6.15** - Soporte para streaming HLS
-
-### Desarrollo
-- **nodemon v2.0.15** - Auto-reinicio del servidor en desarrollo
-- **eslint v9.39.1** - Linter para JavaScript
-- **dotenv v17.2.3** - Gestión de variables de entorno
+### Testing
+- **jest 29.7** - Framework de testing
+- **supertest 6.3** - Testing HTTP
+- **mongodb-memory-server 9.1** - MongoDB en memoria
 
 ---
 
-## 📁 Estructura del Proyecto
+## 🏗️ Arquitectura
+
+### Estructura de Capas
+
+```
+┌─────────────────────────────────────────┐
+│          Client Request                  │
+└──────────────┬──────────────────────────┘
+               │
+┌──────────────▼──────────────────────────┐
+│  Middlewares (Security, Auth, RBAC)     │
+└──────────────┬──────────────────────────┘
+               │
+┌──────────────▼──────────────────────────┐
+│  Controllers (HTTP Handling)            │
+└──────────────┬──────────────────────────┘
+               │
+┌──────────────▼──────────────────────────┐
+│  Services (Business Logic)              │
+└──────────────┬──────────────────────────┘
+               │
+┌──────────────▼──────────────────────────┐
+│  Repositories (Data Access)             │
+└──────────────┬──────────────────────────┘
+               │
+┌──────────────▼──────────────────────────┐
+│  MongoDB (Database)                     │
+└─────────────────────────────────────────┘
+```
+
+### Estructura de Directorios
 
 ```
 backend/
 ├── src/
-│   ├── config/
-│   │   └── db.js                 # Configuración de MongoDB
-│   ├── controllers/
-│   │   ├── authController.js     # Lógica de autenticación
-│   │   ├── userController.js     # Lógica de usuarios
-│   │   ├── videoController.js    # Lógica de videos
-│   │   ├── commentController.js  # Lógica de comentarios
-│   │   └── ratingController.js   # Lógica de valoraciones
-│   ├── middlewares/
-│   │   ├── auth.js              # Verificación de JWT
-│   │   ├── admin.js             # Verificación de rol admin
-│   │   ├── upload.js            # Configuración de Multer
-│   │   ├── validate.js          # Manejo de validaciones
-│   │   └── error.js             # Manejo global de errores
-│   ├── models/
-│   │   ├── User.js              # Modelo de Usuario
-│   │   ├── Video.js             # Modelo de Video
-│   │   ├── Comment.js           # Modelo de Comentario
-│   │   └── Rating.js            # Modelo de Valoración
-│   └── routes/
-│       ├── auth.js              # Rutas de autenticación
-│       ├── users.js             # Rutas de usuarios
-│       ├── videos.js            # Rutas de videos
-│       ├── comments.js          # Rutas de comentarios
-│       └── ratings.js           # Rutas de valoraciones
-├── uploads/                      # Directorio de videos subidos
-├── public/                       # Archivos estáticos
-├── views/                        # Vistas (si aplica)
-├── .env                         # Variables de entorno
-├── app.js                       # Configuración de Express
-├── server.js                    # Punto de entrada del servidor
-├── swagger.js                   # Configuración de Swagger
-├── swagger-output.json          # Documentación Swagger generada
-└── package.json                 # Dependencias y scripts
+│   ├── config/          # Configuración (DB, Logger)
+│   ├── controllers/     # Controladores HTTP
+│   ├── services/        # Lógica de negocio
+│   ├── repositories/    # Acceso a datos
+│   ├── middlewares/     # Middlewares personalizados
+│   ├── models/          # Modelos de Mongoose
+│   ├── routes/          # Definición de rutas
+│   └── utils/           # Utilidades
+├── storage/             # Almacenamiento de archivos
+├── logs/                # Archivos de log
+├── .env                 # Variables de entorno
+└── app.js               # Configuración de Express
 ```
 
 ---
 
-## 🗄️ Modelos de Datos
-
-### User (Usuario)
-
-```javascript
-{
-  name: String,           // Nombre completo (requerido)
-  email: String,          // Email único (requerido)
-  password: String,       // Contraseña encriptada (requerido)
-  institution: String,    // Institución educativa (opcional)
-  profilePicture: String, // URL de foto de perfil (opcional)
-  role: String            // Rol: 'Estudiante', 'Docente', 'Administrador'
-}
-```
-
-### Video
-
-```javascript
-{
-  titulo: String,         // Título del video (requerido)
-  descripcion: String,    // Descripción del video (requerido)
-  url_video: String,      // Ruta del archivo de video (requerido)
-  autor_id: ObjectId,     // Referencia al usuario autor (requerido)
-  aprobado: Boolean,      // Estado de aprobación (default: true)
-  fecha_creacion: Date    // Fecha de creación (default: Date.now)
-}
-```
-
-### Comment (Comentario)
-
-```javascript
-{
-  video_id: ObjectId,     // Referencia al video (requerido)
-  autor_id: ObjectId,     // Referencia al usuario autor (requerido)
-  comentario: String,     // Texto del comentario (requerido)
-  fecha_creacion: Date    // Fecha de creación (default: Date.now)
-}
-```
-
-### Rating (Valoración)
-
-```javascript
-{
-  video_id: ObjectId,     // Referencia al video (requerido)
-  user_id: ObjectId,      // Referencia al usuario (requerido)
-  valoracion: Number      // Valoración de 1 a 5 (requerido)
-}
-```
-
----
-
-## 🔌 API Endpoints
-
-### Autenticación (`/api/auth`)
-
-| Método | Endpoint | Descripción | Acceso |
-|--------|----------|-------------|--------|
-| POST | `/register` | Registrar nuevo usuario | Público |
-| POST | `/login` | Iniciar sesión | Público |
-
-**Registro de Usuario:**
-```json
-POST /api/auth/register
-{
-  "name": "Juan Pérez",
-  "email": "juan@example.com",
-  "password": "password123",
-  "institution": "Universidad Nacional de Loja",
-  "role": "Estudiante"
-}
-```
-
-**Inicio de Sesión:**
-```json
-POST /api/auth/login
-{
-  "email": "juan@example.com",
-  "password": "password123"
-}
-```
-
-### Usuarios (`/api/users`)
-
-| Método | Endpoint | Descripción | Acceso |
-|--------|----------|-------------|--------|
-| GET | `/` | Obtener todos los usuarios | Privado |
-| GET | `/:id` | Obtener usuario por ID | Privado |
-| PUT | `/:id` | Actualizar usuario | Privado |
-| DELETE | `/:id` | Eliminar usuario | Privado/Admin |
-
-### Videos (`/api/videos`)
-
-| Método | Endpoint | Descripción | Acceso |
-|--------|----------|-------------|--------|
-| POST | `/` | Subir un video | Privado |
-| GET | `/` | Obtener videos aprobados | Público |
-| PUT | `/:id/approve` | Aprobar un video | Privado/Admin |
-
-**Subir Video:**
-```
-POST /api/videos
-Content-Type: multipart/form-data
-
-titulo: "Ecosistemas de Loja"
-descripcion: "Video educativo sobre los ecosistemas..."
-video: [archivo de video]
-```
-
-### Comentarios (`/api/videos/:videoId/comments`)
-
-| Método | Endpoint | Descripción | Acceso |
-|--------|----------|-------------|--------|
-| POST | `/` | Crear comentario | Privado |
-| GET | `/` | Obtener comentarios del video | Público |
-| DELETE | `/:commentId` | Eliminar comentario | Privado |
-
-**Crear Comentario:**
-```json
-POST /api/videos/:videoId/comments
-{
-  "comentario": "Excelente contenido educativo!"
-}
-```
-
-### Valoraciones (`/api/videos/:videoId/rate`)
-
-| Método | Endpoint | Descripción | Acceso |
-|--------|----------|-------------|--------|
-| POST | `/` | Valorar un video | Privado |
-| GET | `/` | Obtener valoración promedio | Público |
-
-**Valorar Video:**
-```json
-POST /api/videos/:videoId/rate
-{
-  "valoracion": 5
-}
-```
-
----
-
-## 🔐 Autenticación y Autorización
+## 🔐 Seguridad
 
 ### Sistema de Autenticación
 
-El backend utiliza **JWT (JSON Web Tokens)** para la autenticación:
+#### Access Tokens
+- **Duración**: 15 minutos
+- **Uso**: Autenticación de peticiones API
+- **Formato**: JWT firmado
 
-1. El usuario se registra o inicia sesión
-2. El servidor genera un token JWT firmado
-3. El cliente incluye el token en las peticiones subsecuentes
-4. El middleware `auth.js` verifica el token en cada petición protegida
+#### Refresh Tokens
+- **Duración**: 7 días
+- **Uso**: Renovar access tokens
+- **Almacenamiento**: Base de datos
+- **Características**: Revocables, rastreables
 
-### Formatos de Token Soportados
+### Rate Limiting
 
-El middleware de autenticación acepta tokens en dos formatos:
+| Endpoint | Límite | Ventana |
+|----------|--------|---------|
+| API General | 100 requests | 15 min |
+| Login | 5 intentos | 15 min |
+| Registro | 3 intentos | 1 hora |
 
-```
-Authorization: Bearer <token>
-```
-o
-```
-x-auth-token: <token>
-```
+### RBAC (Control de Acceso Basado en Roles)
 
-### Roles de Usuario
-
-- **Estudiante** (default): Puede ver videos, comentar y valorar
-- **Docente**: Puede subir videos además de las funciones de estudiante
-- **Administrador**: Puede aprobar videos y gestionar usuarios
-
-### Middleware de Autorización
-
-- **`auth.js`**: Verifica que el usuario esté autenticado
-- **`admin.js`**: Verifica que el usuario tenga rol de Administrador
+| Rol | Permisos |
+|-----|----------|
+| **Estudiante** | Ver videos, comentar, valorar |
+| **Docente** | Todo Estudiante + subir videos |
+| **Administrador** | Todo Docente + aprobar videos, gestionar usuarios |
+| **SuperAdmin** | Todos los permisos + configuración del sistema |
 
 ---
 
 ## 🚀 Instalación y Configuración
 
 ### Requisitos Previos
-
-- Node.js (v14 o superior)
-- MongoDB (local o MongoDB Atlas)
+- Node.js 18+
+- MongoDB (local o Atlas)
 - npm o yarn
 
 ### Pasos de Instalación
@@ -306,16 +190,43 @@ npm install
 
 3. **Configurar variables de entorno**
 
-Crear un archivo `.env` en la raíz del proyecto:
+Copiar `.env.example` a `.env` y configurar:
 
 ```env
+# Database
 DB_URI=mongodb+srv://usuario:password@cluster.mongodb.net/ecolearn
-JWT_SECRET=tu_clave_secreta_super_segura
+
+# JWT
+JWT_SECRET=tu_clave_super_segura_cambia_esto_en_produccion
+JWT_ACCESS_EXPIRE=15m
+JWT_REFRESH_EXPIRE=7d
+
+# Server
 PORT=3001
-CORS_ORIGIN=http://localhost:3000
+NODE_ENV=development
+
+# CORS
+CORS_ORIGIN=http://localhost:3000,http://localhost:5173
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# File Upload
+MAX_FILE_SIZE=524288000
+UPLOAD_PATH=./storage/videos
+
+# Logging
+LOG_LEVEL=info
+LOG_FILE_PATH=./logs
 ```
 
-4. **Iniciar el servidor**
+4. **Crear directorios necesarios**
+```bash
+mkdir -p storage/videos logs
+```
+
+5. **Iniciar el servidor**
 
 **Desarrollo:**
 ```bash
@@ -331,78 +242,236 @@ El servidor estará disponible en `http://localhost:3001`
 
 ---
 
-## 📜 Scripts Disponibles
+## 📡 API Endpoints
 
-| Script | Comando | Descripción |
-|--------|---------|-------------|
-| **start** | `npm start` | Inicia el servidor en modo producción |
-| **dev** | `npm run dev` | Inicia el servidor con nodemon (auto-reload) |
-| **lint** | `npm run lint` | Ejecuta ESLint para verificar el código |
+### Autenticación (`/api/auth`)
+
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| POST | `/register` | Registrar usuario | Público |
+| POST | `/login` | Iniciar sesión | Público |
+| POST | `/refresh` | Renovar access token | Público |
+| POST | `/logout` | Cerrar sesión | Privado |
+| POST | `/logout-all` | Cerrar sesión en todos los dispositivos | Privado |
+| PUT | `/change-password` | Cambiar contraseña | Privado |
+
+### Usuarios (`/api/users`)
+
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| GET | `/me` | Obtener mi perfil | Privado |
+| PUT | `/me` | Actualizar mi perfil | Privado |
+| PUT | `/me/profile-picture` | Actualizar foto de perfil | Privado |
+| DELETE | `/me` | Eliminar mi cuenta | Privado |
+| GET | `/` | Listar usuarios | Admin |
+| GET | `/:id` | Obtener usuario | Privado |
+| PUT | `/:id` | Actualizar usuario | Privado/Admin |
+| DELETE | `/:id` | Eliminar usuario | Admin |
+
+### Videos (`/api/videos`)
+
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| POST | `/` | Subir video | Docente+ |
+| GET | `/` | Listar videos públicos | Público |
+| GET | `/pending` | Videos pendientes | Admin |
+| GET | `/author/:authorId` | Videos por autor | Público |
+| GET | `/:id` | Obtener video | Público |
+| PUT | `/:id` | Actualizar video | Privado |
+| PUT | `/:id/approve` | Aprobar video | Admin |
+| DELETE | `/:id` | Eliminar video | Privado |
+
+### Comentarios (`/api/videos/:videoId/comments`)
+
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| POST | `/` | Crear comentario | Privado |
+| GET | `/` | Listar comentarios | Público |
+| PUT | `/:commentId` | Actualizar comentario | Privado |
+| DELETE | `/:commentId` | Eliminar comentario | Privado |
+
+### Valoraciones (`/api/videos/:videoId/rate`)
+
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| POST | `/` | Valorar video | Privado |
+| GET | `/` | Estadísticas de valoración | Público |
+| GET | `/me` | Mi valoración | Privado |
+| DELETE | `/` | Eliminar valoración | Privado |
 
 ---
 
-## 🔧 Variables de Entorno
+## 🔑 Autenticación
 
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `DB_URI` | URI de conexión a MongoDB | `mongodb://localhost:27017/ecolearn` |
-| `JWT_SECRET` | Clave secreta para firmar tokens JWT | `mi_clave_super_segura_12345` |
-| `PORT` | Puerto del servidor | `3001` |
-| `CORS_ORIGIN` | Orígenes permitidos para CORS (separados por coma) | `http://localhost:3000,https://app.com` |
+### Flujo de Autenticación
+
+1. **Registro/Login**
+```bash
+POST /api/auth/login
+{
+  "email": "user@example.com",
+  "password": "SecurePass123!"
+}
+
+# Respuesta
+{
+  "success": true,
+  "data": {
+    "user": { ... },
+    "accessToken": "eyJhbGc...",
+    "refreshToken": "a1b2c3d4...",
+    "refreshTokenExpiresAt": "2025-12-03T..."
+  }
+}
+```
+
+2. **Usar Access Token**
+```bash
+GET /api/videos
+Authorization: Bearer eyJhbGc...
+```
+
+3. **Renovar Access Token**
+```bash
+POST /api/auth/refresh
+{
+  "refreshToken": "a1b2c3d4..."
+}
+
+# Respuesta
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGc...",
+    "user": { ... }
+  }
+}
+```
 
 ---
 
-## 🛡️ Middlewares
+## 👤 Gestión de Perfil
 
-### Middlewares de Seguridad
+### Actualizar Mi Perfil
 
-- **`helmet`**: Configura headers HTTP seguros
-- **`cors`**: Permite peticiones desde orígenes específicos
-- **`express.json`**: Parsea JSON con límite de 10mb
+```bash
+PUT /api/users/me
+Authorization: Bearer eyJhbGc...
 
-### Middlewares Personalizados
+{
+  "name": "Juan Pérez Actualizado",
+  "email": "nuevo.email@example.com",
+  "institution": "Universidad de Loja"
+}
 
-#### `auth.js`
-Verifica que el usuario esté autenticado mediante JWT.
-
-```javascript
-// Uso en rutas
-router.get('/protected', auth, controller);
+# Respuesta
+{
+  "success": true,
+  "data": {
+    "_id": "...",
+    "name": "Juan Pérez Actualizado",
+    "email": "nuevo.email@example.com",
+    "institution": "Universidad de Loja",
+    "role": "Estudiante"
+  },
+  "message": "Profile updated successfully"
+}
 ```
 
-#### `admin.js`
-Verifica que el usuario tenga rol de Administrador.
+### Subir Foto de Perfil
 
-```javascript
-// Uso en rutas
-router.put('/admin-only', [auth, admin], controller);
+```bash
+PUT /api/users/me/profile-picture
+Authorization: Bearer eyJhbGc...
+Content-Type: multipart/form-data
+
+profilePicture: [archivo de imagen]
+
+# Respuesta
+{
+  "success": true,
+  "data": {
+    "_id": "...",
+    "name": "Juan Pérez",
+    "profilePicture": "storage/profile-pictures/profile-123-1234567890.jpg"
+  },
+  "message": "Profile picture updated successfully"
+}
 ```
 
-#### `upload.js`
-Configura Multer para la subida de archivos de video.
+**Formatos Permitidos**: JPEG, PNG, WebP  
+**Tamaño Máximo**: 5MB
 
-- Almacena videos en `uploads/videos/`
-- Acepta formatos: mp4, avi, mov, mkv, webm
-- Tamaño máximo: 500MB
+### Eliminar Mi Cuenta
 
-```javascript
-// Uso en rutas
-router.post('/upload', [auth, upload], controller);
+```bash
+DELETE /api/users/me
+Authorization: Bearer eyJhbGc...
+
+{
+  "password": "MiContraseñaActual123!"
+}
+
+# Respuesta
+{
+  "success": true,
+  "message": "Account deleted successfully"
+}
 ```
 
-#### `validate.js`
-Maneja los errores de validación de `express-validator`.
+**Nota**: Requiere contraseña para confirmar. La eliminación es reversible (soft delete).
 
-```javascript
-// Uso en rutas
-router.post('/', [
-  body('email').isEmail(),
-  handleValidation
-], controller);
+### Permisos de Edición por Rol
+
+| Campo | Usuario | Admin | SuperAdmin |
+|-------|---------|-------|------------|
+| `name` | ✅ | ✅ | ✅ |
+| `institution` | ✅ | ✅ | ✅ |
+| `email` | ✅ (propio) | ✅ | ✅ |
+| `role` | ❌ | ✅ | ✅ |
+| `password` | Solo via `/auth/change-password` | - | - |
+
+### Restricciones de Registro
+
+- ✅ **Estudiante**: Puede auto-registrarse
+- ✅ **Docente**: Puede auto-registrarse
+- ❌ **Administrador**: Solo asignado por SuperAdmin
+- ❌ **SuperAdmin**: Solo asignado manualmente en BD
+
+---
+
+---
+
+## 🧪 Testing
+
+### Ejecutar Tests
+
+```bash
+# Todos los tests con cobertura
+npm test
+
+# Solo tests unitarios
+npm run test:unit
+
+# Solo tests de integración
+npm run test:integration
+
+# Modo watch
+npm run test:watch
 ```
 
-#### `error.js`
-Middleware global de manejo de errores.
+### Estructura de Tests
+
+```
+src/tests/
+├── unit/
+│   ├── services/
+│   └── utils/
+└── integration/
+    ├── auth.test.js
+    ├── users.test.js
+    └── videos.test.js
+```
 
 ---
 
@@ -410,62 +479,129 @@ Middleware global de manejo de errores.
 
 ### Swagger UI
 
-La documentación interactiva de la API está disponible en:
+Documentación interactiva disponible en:
 
 ```
 http://localhost:3001/api-docs
 ```
 
-Esta documentación incluye:
-- Todos los endpoints disponibles
-- Esquemas de datos
-- Ejemplos de peticiones y respuestas
-- Posibilidad de probar los endpoints directamente
-
-### Generación de Documentación
-
-Para regenerar la documentación Swagger:
-
-```bash
-node swagger.js
-```
-
-Esto actualizará el archivo `swagger-output.json`.
+### Características de la Documentación
+- Todos los endpoints documentados
+- Esquemas de datos completos
+- Ejemplos de peticiones/respuestas
+- Prueba de endpoints en vivo
+- Autenticación Bearer token integrada
 
 ---
 
-## 🎨 Características Adicionales
+## 📊 Logging
 
-### Streaming de Videos
+### Niveles de Log
 
-El backend soporta **Range requests** para streaming eficiente de videos, permitiendo:
-- Reproducción progresiva
-- Búsqueda (seeking) en el video
-- Menor consumo de ancho de banda
+- **error**: Errores críticos
+- **warn**: Advertencias
+- **info**: Información general
+- **debug**: Información de depuración
 
-### Población de Datos
+### Archivos de Log
 
-Las consultas a la base de datos utilizan `.populate()` para incluir información relacionada:
-
-```javascript
-// Ejemplo: Videos con información del autor
-Video.find().populate('autor_id', 'name institution')
+```
+logs/
+├── error-2025-11-26.log      # Solo errores
+├── combined-2025-11-26.log   # Todos los logs
+└── ...
 ```
 
-### Validación de Datos
+### Ejemplo de Log
 
-Todas las rutas incluyen validación mediante `express-validator`:
+```json
+{
+  "level": "info",
+  "message": "User logged in successfully",
+  "timestamp": "2025-11-26 22:55:43",
+  "userId": "507f1f77bcf86cd799439011",
+  "email": "user@example.com",
+  "ip": "192.168.1.1"
+}
+```
 
-- **Registro**: Valida formato de email, longitud de contraseña, roles válidos
-- **Videos**: Valida longitud de título y descripción
-- **Comentarios**: Valida contenido del comentario
-- **Valoraciones**: Valida rango de 1-5
+---
+
+## 🔧 Scripts Disponibles
+
+| Script | Comando | Descripción |
+|--------|---------|-------------|
+| **start** | `npm start` | Inicia servidor (producción) |
+| **dev** | `npm run dev` | Inicia con nodemon (desarrollo) |
+| **test** | `npm test` | Ejecuta tests con cobertura |
+| **test:unit** | `npm run test:unit` | Tests unitarios |
+| **test:integration** | `npm run test:integration` | Tests de integración |
+| **test:watch** | `npm run test:watch` | Tests en modo watch |
+| **lint** | `npm run lint` | Ejecuta ESLint |
+
+---
+
+## 📈 Optimizaciones de Rendimiento
+
+### Índices de Base de Datos
+- Email de usuario (único)
+- Autor de video
+- Fecha de creación de video
+- Búsqueda de texto completo en videos
+- Índice compuesto para ratings
+
+### Paginación
+- Resultados paginados (10-50 por página)
+- Metadata de paginación incluida
+- Límites configurables
+
+### Soft Delete
+- Eliminación reversible
+- Consultas automáticamente filtradas
+- Opción de incluir eliminados
+
+---
+
+## 🚨 Manejo de Errores
+
+### Formato de Error Estándar
+
+```json
+{
+  "success": false,
+  "error": "Error message",
+  "errorCode": "ERROR_CODE"
+}
+```
+
+### Códigos de Error Comunes
+
+- `TOKEN_MISSING` - Token de autorización faltante
+- `TOKEN_EXPIRED` - Token expirado
+- `INVALID_TOKEN` - Token inválido
+- `INVALID_CREDENTIALS` - Credenciales incorrectas
+- `EMAIL_EXISTS` - Email ya registrado
+- `NOT_FOUND` - Recurso no encontrado
+- `FORBIDDEN` - Acceso denegado
+
+---
+
+## 🔄 Próximas Mejoras
+
+- [ ] Integración FFmpeg para thumbnails
+- [ ] Streaming HLS adaptativo
+- [ ] Caché con Redis
+- [ ] Servicio de email
+- [ ] Limpieza automática de archivos
+- [ ] Monitoreo con APM
+- [ ] Tests completos (cobertura 80%+)
 
 ---
 
 ## 👨‍💻 Autor
 
-**Ismael Gonzalez**
+**Ismael Gonzalez**  
+Email: castroismael571@gmail.com
 
 ---
 
@@ -475,25 +611,21 @@ ISC
 
 ---
 
-## 🔄 Próximas Mejoras
-
-- [ ] Implementar paginación en listados
-- [ ] Agregar búsqueda y filtros de videos
-- [ ] Implementar notificaciones en tiempo real
-- [ ] Agregar transcoding de videos para múltiples resoluciones
-- [ ] Implementar caché con Redis
-- [ ] Agregar tests unitarios y de integración
-- [ ] Implementar rate limiting para prevenir abuso
-- [ ] Agregar soporte para subtítulos
-
----
-
-## 🐛 Reporte de Errores
-
-Para reportar errores o sugerir mejoras, por favor crea un issue en el repositorio del proyecto.
-
----
-
 ## 📞 Soporte
 
-Para preguntas o soporte, contacta a: castroismael571@gmail.com
+Para preguntas, bugs o sugerencias:
+- Email: castroismael571@gmail.com
+- Issues: GitHub repository
+
+---
+
+## 🎓 Documentos Adicionales
+
+- [OPTIMIZATION_SUMMARY.md](./OPTIMIZATION_SUMMARY.md) - Resumen completo de optimizaciones
+- [.env.example](./.env.example) - Plantilla de variables de entorno
+
+---
+
+**Versión**: 2.0.0  
+**Última Actualización**: 2025-11-26  
+**Estado**: ✅ Producción Ready

@@ -1,38 +1,85 @@
+const commentService = require('../services/commentService');
+const asyncHandler = require('../middlewares/asyncHandler');
 
-const Comment = require('../models/Comment');
-const Video = require('../models/Video');
-
-// @desc    Add a comment to a video
-// @route   POST /api/videos/:videoId/comments
-// @access  Private
-const addComment = async (req, res) => {
-    const { videoId } = req.params;
+/**
+ * @desc    Create a comment
+ * @route   POST /api/videos/:videoId/comments
+ * @access  Private
+ */
+const createComment = asyncHandler(async (req, res) => {
     const { comentario } = req.body;
-    // TODO: Get user from auth middleware
-    const autor_id = req.user.id;
 
-    try {
-        const video = await Video.findById(videoId);
+    const comment = await commentService.createComment(
+        req.params.videoId,
+        req.user.id,
+        comentario
+    );
 
-        if (!video) {
-            return res.status(404).json({ message: 'Video not found' });
-        }
+    res.status(201).json({
+        success: true,
+        data: comment,
+    });
+});
 
-        const newComment = new Comment({
-            video_id: videoId,
-            autor_id,
-            comentario,
-        });
+/**
+ * @desc    Get comments for a video
+ * @route   GET /api/videos/:videoId/comments
+ * @access  Public
+ */
+const getVideoComments = asyncHandler(async (req, res) => {
+    const result = await commentService.getVideoComments(
+        req.params.videoId,
+        req.query
+    );
 
-        const comment = await newComment.save();
+    res.json({
+        success: true,
+        ...result,
+    });
+});
 
-        res.status(201).json(comment);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
+/**
+ * @desc    Update a comment
+ * @route   PUT /api/videos/:videoId/comments/:commentId
+ * @access  Private
+ */
+const updateComment = asyncHandler(async (req, res) => {
+    const { comentario } = req.body;
+
+    const comment = await commentService.updateComment(
+        req.params.commentId,
+        req.user.id,
+        req.user.role,
+        comentario
+    );
+
+    res.json({
+        success: true,
+        data: comment,
+    });
+});
+
+/**
+ * @desc    Delete a comment
+ * @route   DELETE /api/videos/:videoId/comments/:commentId
+ * @access  Private
+ */
+const deleteComment = asyncHandler(async (req, res) => {
+    await commentService.deleteComment(
+        req.params.commentId,
+        req.user.id,
+        req.user.role
+    );
+
+    res.json({
+        success: true,
+        message: 'Comment deleted successfully',
+    });
+});
 
 module.exports = {
-    addComment,
+    createComment,
+    getVideoComments,
+    updateComment,
+    deleteComment,
 };

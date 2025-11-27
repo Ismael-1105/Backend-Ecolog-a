@@ -3,6 +3,9 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs');
+const logger = require('./src/config/logger');
+const { apiLimiter } = require('./src/middlewares/rateLimiter');
+const { mongoSanitizeMiddleware, xssMiddleware } = require('./src/middlewares/sanitize');
 
 // Swagger (optional)
 let swaggerUi = null;
@@ -31,20 +34,53 @@ const app = express();
 // Trust proxy (useful for rate-limit/proxies)
 app.set('trust proxy', 1);
 
-// Middlewares
-app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
-    credentials: true,
-  })
-);
+// Security Middlewares
+// Helmet - Set security headers
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+      },
+    },
   })
 );
+
+// CORS - Dynamic whitelist from environment
+const corsOptions = {
+  origin: function (origin, callback) {
+    const whitelist = process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
+      : ['http://localhost:3000'];
+
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || whitelist.indexOf(origin) !== -1 || whitelist.includes('*')) {
+      callback(null, true);
+    } else {
+      logger.warn('CORS blocked request', { origin });
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+};
+app.use(cors(corsOptions));
+
+// Rate limiting - Apply to all API routes
+app.use('/api', apiLimiter);
+
+// Body parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false }));
+
+// Data sanitization against NoSQL injection
+app.use(mongoSanitizeMiddleware);
+
+// Data sanitization against XSS
+app.use(xssMiddleware);
 
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
@@ -64,15 +100,34 @@ app.use('/api/videos', videoRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.send('EcoLearn Loja API');
+  res.json({
+    success: true,
+    message: 'EcoLearn Loja API',
+    version: '2.0.0',
+    documentation: '/api-docs',
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    success: true,
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ message: 'Not found' });
+  res.status(404).json({
+    success: false,
+    error: 'Not found',
+    path: req.originalUrl,
+  });
 });
 
 // Error handler
 app.use(errorHandler);
 
 module.exports = app;
+

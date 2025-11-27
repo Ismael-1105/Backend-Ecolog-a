@@ -1,98 +1,140 @@
+const authService = require('../services/authService');
+const asyncHandler = require('../middlewares/asyncHandler');
 
-const User = require('../models/User');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+/**
+ * @desc    Register user
+ * @route   POST /api/auth/register
+ * @access  Public
+ */
+const registerUser = asyncHandler(async (req, res) => {
+    const deviceInfo = {
+        userAgent: req.get('user-agent'),
+        ip: req.ip,
+    };
 
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
-const registerUser = async (req, res) => {
-    const { name, email, password, institution, role } = req.body;
+    const result = await authService.registerUser(req.body, deviceInfo);
 
-    try {
-        let user = await User.findOne({ email });
+    res.status(201).json({
+        success: true,
+        data: {
+            user: result.user,
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
+            refreshTokenExpiresAt: result.refreshTokenExpiresAt,
+        },
+    });
+});
 
-        if (user) {
-            return res.status(400).json({ msg: 'User already exists' });
-        }
-
-        user = new User({
-            name,
-            email,
-            password,
-            institution,
-            role,
-        });
-
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(password, salt);
-
-        await user.save();
-
-        const payload = {
-            user: {
-                id: user.id,
-            },
-        };
-
-        jwt.sign(
-            payload,
-            process.env.JWT_SECRET,
-            { expiresIn: 3600 },
-            (err, token) => {
-                if (err) throw err;
-                res.json({ token });
-            }
-        );
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
-    }
-};
-
-// @desc    Auth user & get token
-// @route   POST /api/auth/login
-// @access  Public
-
-const loginUser = async (req, res) => {
+/**
+ * @desc    Login user
+ * @route   POST /api/auth/login
+ * @access  Public
+ */
+const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
-    try {
-        let user = await User.findOne({ email });
+    const deviceInfo = {
+        userAgent: req.get('user-agent'),
+        ip: req.ip,
+    };
 
-        if (!user) {
-            return res.status(400).json({ msg: 'Invalid credentials' });
-        }
+    const result = await authService.loginUser(email, password, deviceInfo);
 
-        const isMatch = await bcrypt.compare(password, user.password);
+    res.json({
+        success: true,
+        data: {
+            user: result.user,
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
+            refreshTokenExpiresAt: result.refreshTokenExpiresAt,
+        },
+    });
+});
 
-        if (!isMatch) {
-            return res.status(400).json({ msg: 'Invalid credentials' });
-        }
+/**
+ * @desc    Refresh access token
+ * @route   POST /api/auth/refresh
+ * @access  Public
+ */
+const refreshToken = asyncHandler(async (req, res) => {
+    const { refreshToken } = req.body;
 
-        const payload = {
-            user: {
-                id: user.id,
-            },
-        };
-
-        jwt.sign(
-            payload,
-            process.env.JWT_SECRET,
-            { expiresIn: 3600 },
-            (err, token) => {
-                if (err) throw err;
-                res.json({ token });
-            }
-        );
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
+    if (!refreshToken) {
+        return res.status(400).json({
+            success: false,
+            error: 'Refresh token is required',
+        });
     }
-};
 
+    const deviceInfo = {
+        userAgent: req.get('user-agent'),
+        ip: req.ip,
+    };
+
+    const result = await authService.refreshAccessToken(refreshToken, deviceInfo);
+
+    res.json({
+        success: true,
+        data: {
+            accessToken: result.accessToken,
+            user: result.user,
+        },
+    });
+});
+
+/**
+ * @desc    Logout user
+ * @route   POST /api/auth/logout
+ * @access  Private
+ */
+const logoutUser = asyncHandler(async (req, res) => {
+    const { refreshToken } = req.body;
+
+    if (refreshToken) {
+        await authService.logoutUser(refreshToken);
+    }
+
+    res.json({
+        success: true,
+        message: 'Logged out successfully',
+    });
+});
+
+/**
+ * @desc    Logout from all devices
+ * @route   POST /api/auth/logout-all
+ * @access  Private
+ */
+const logoutAllDevices = asyncHandler(async (req, res) => {
+    await authService.logoutAllDevices(req.user.id);
+
+    res.json({
+        success: true,
+        message: 'Logged out from all devices successfully',
+    });
+});
+
+/**
+ * @desc    Change password
+ * @route   PUT /api/auth/change-password
+ * @access  Private
+ */
+const changePassword = asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    await authService.changePassword(req.user.id, currentPassword, newPassword);
+
+    res.json({
+        success: true,
+        message: 'Password changed successfully. Please login again.',
+    });
+});
 
 module.exports = {
     registerUser,
     loginUser,
+    refreshToken,
+    logoutUser,
+    logoutAllDevices,
+    changePassword,
 };

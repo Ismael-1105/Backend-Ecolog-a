@@ -1,80 +1,136 @@
+const videoService = require('../services/videoService');
+const asyncHandler = require('../middlewares/asyncHandler');
 
-const Video = require('../models/Video');
-
-// @desc    Upload a video
-// @route   POST /api/videos
-// @access  Private
-
-const uploadVideo = async (req, res) => {
+/**
+ * @desc    Upload a video
+ * @route   POST /api/videos
+ * @access  Private
+ */
+const uploadVideo = asyncHandler(async (req, res) => {
     const { titulo, descripcion } = req.body;
-    if (!req.file) {
-        return res.status(400).json({ message: 'Video file is required' });
-    }
-    const url_video = req.file.path.replace(/\\/g, '/');
 
-    // TODO: Get user from auth middleware
-    const autor_id = req.user.id;
+    const video = await videoService.uploadVideo(
+        { titulo, descripcion },
+        req.file,
+        req.user.id
+    );
 
-    try {
-        const newVideo = new Video({
-            titulo,
-            descripcion,
-            url_video,
-            autor_id,
-        });
+    res.status(201).json({
+        success: true,
+        data: video,
+    });
+});
 
-        const video = await newVideo.save();
+/**
+ * @desc    Get all public videos
+ * @route   GET /api/videos
+ * @access  Public
+ */
+const getPublicVideos = asyncHandler(async (req, res) => {
+    const result = await videoService.getPublicVideos(req.query);
 
-        res.status(201).json(video);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
+    res.json({
+        success: true,
+        ...result,
+    });
+});
 
+/**
+ * @desc    Get video by ID
+ * @route   GET /api/videos/:id
+ * @access  Public
+ */
+const getVideoById = asyncHandler(async (req, res) => {
+    const video = await videoService.getVideoById(req.params.id, true);
 
-// @desc    Get all public videos
-// @route   GET /api/videos
-// @access  Public
-const getPublicVideos = async (req, res) => {
-    try {
-        const videos = await Video.find({ aprobado: true }).populate('autor_id', 'name institution');
-        res.json(videos);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
+    res.json({
+        success: true,
+        data: video,
+    });
+});
 
-// @desc    Approve a video
-// @route   PUT /api/videos/:id/approve
-// @access  Private/Admin
+/**
+ * @desc    Get videos by author
+ * @route   GET /api/videos/author/:authorId
+ * @access  Public
+ */
+const getVideosByAuthor = asyncHandler(async (req, res) => {
+    const result = await videoService.getVideosByAuthor(req.params.authorId, req.query);
 
-const approveVideo = async (req, res) => {
-    try {
-        const video = await Video.findById(req.params.id);
+    res.json({
+        success: true,
+        ...result,
+    });
+});
 
-        if (!video) {
-            return res.status(404).json({ message: 'Video not found' });
-        }
+/**
+ * @desc    Get pending approval videos
+ * @route   GET /api/videos/pending
+ * @access  Private/Admin
+ */
+const getPendingVideos = asyncHandler(async (req, res) => {
+    const result = await videoService.getPendingVideos(req.query);
 
-        video.aprobado = true;
+    res.json({
+        success: true,
+        ...result,
+    });
+});
 
-        await video.save();
+/**
+ * @desc    Approve a video
+ * @route   PUT /api/videos/:id/approve
+ * @access  Private/Admin
+ */
+const approveVideo = asyncHandler(async (req, res) => {
+    const video = await videoService.approveVideo(req.params.id, req.user.id);
 
-        res.json(video);
-    } catch (err) {
-        console.error(err);
-        if (err.kind === 'ObjectId') {
-            return res.status(404).json({ message: 'Video not found' });
-        }
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
+    res.json({
+        success: true,
+        data: video,
+    });
+});
 
+/**
+ * @desc    Update video
+ * @route   PUT /api/videos/:id
+ * @access  Private
+ */
+const updateVideo = asyncHandler(async (req, res) => {
+    const video = await videoService.updateVideo(
+        req.params.id,
+        req.body,
+        req.user.id,
+        req.user.role
+    );
+
+    res.json({
+        success: true,
+        data: video,
+    });
+});
+
+/**
+ * @desc    Delete video
+ * @route   DELETE /api/videos/:id
+ * @access  Private
+ */
+const deleteVideo = asyncHandler(async (req, res) => {
+    await videoService.deleteVideo(req.params.id, req.user.id, req.user.role);
+
+    res.json({
+        success: true,
+        message: 'Video deleted successfully',
+    });
+});
 
 module.exports = {
     uploadVideo,
     getPublicVideos,
+    getVideoById,
+    getVideosByAuthor,
+    getPendingVideos,
     approveVideo,
+    updateVideo,
+    deleteVideo,
 };

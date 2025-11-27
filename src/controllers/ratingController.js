@@ -1,46 +1,78 @@
+const ratingService = require('../services/ratingService');
+const asyncHandler = require('../middlewares/asyncHandler');
 
-const Rating = require('../models/Rating');
-const Video = require('../models/Video');
-
-// @desc    Rate a video
-// @route   POST /api/videos/:videoId/rate
-// @access  Private
-const addRating = async (req, res) => {
-    const { videoId } = req.params;
+/**
+ * @desc    Rate a video
+ * @route   POST /api/videos/:videoId/rate
+ * @access  Private
+ */
+const rateVideo = asyncHandler(async (req, res) => {
     const { valoracion } = req.body;
-    // TODO: Get user from auth middleware
-    const user_id = req.user.id;
 
-    try {
-        const video = await Video.findById(videoId);
+    const result = await ratingService.rateVideo(
+        req.params.videoId,
+        req.user.id,
+        valoracion
+    );
 
-        if (!video) {
-            return res.status(404).json({ message: 'Video not found' });
-        }
+    res.json({
+        success: true,
+        data: result,
+    });
+});
 
-        let rating = await Rating.findOne({ video_id: videoId, user_id });
+/**
+ * @desc    Get video rating statistics
+ * @route   GET /api/videos/:videoId/rate
+ * @access  Public
+ */
+const getVideoRatingStats = asyncHandler(async (req, res) => {
+    const stats = await ratingService.getVideoRatingStats(req.params.videoId);
 
-        if (rating) {
-            // Update rating
-            rating.valoracion = valoracion;
-        } else {
-            // Create new rating
-            rating = new Rating({
-                video_id: videoId,
-                user_id,
-                valoracion,
-            });
-        }
+    res.json({
+        success: true,
+        data: stats,
+    });
+});
 
-        await rating.save();
+/**
+ * @desc    Get user's rating for a video
+ * @route   GET /api/videos/:videoId/rate/me
+ * @access  Private
+ */
+const getUserRating = asyncHandler(async (req, res) => {
+    const rating = await ratingService.getUserRating(
+        req.params.videoId,
+        req.user.id
+    );
 
-        res.status(201).json(rating);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
+    res.json({
+        success: true,
+        data: rating,
+    });
+});
+
+/**
+ * @desc    Delete user's rating
+ * @route   DELETE /api/videos/:videoId/rate
+ * @access  Private
+ */
+const deleteRating = asyncHandler(async (req, res) => {
+    const result = await ratingService.deleteRating(
+        req.params.videoId,
+        req.user.id
+    );
+
+    res.json({
+        success: true,
+        data: result,
+        message: 'Rating deleted successfully',
+    });
+});
 
 module.exports = {
-    addRating,
+    rateVideo,
+    getVideoRatingStats,
+    getUserRating,
+    deleteRating,
 };
