@@ -1,35 +1,59 @@
-
 const mongoose = require('mongoose');
 
 const VideoSchema = new mongoose.Schema({
-  titulo: {
+  title: {
     type: String,
-    required: true,
+    required: [true, 'Title is required'],
     trim: true,
+    maxlength: [200, 'Title cannot exceed 200 characters']
   },
-  descripcion: {
+  description: {
+    type: String,
+    required: [true, 'Description is required'],
+    maxlength: [2000, 'Description cannot exceed 2000 characters']
+  },
+  videoUrl: {
+    type: String,
+    required: [true, 'Video URL is required'],
+  },
+  videoPublicId: {
     type: String,
     required: true,
   },
-  url_video: {
+  thumbnailUrl: {
+    type: String,
+    required: [true, 'Thumbnail is required'],
+  },
+  thumbnailPublicId: {
     type: String,
     required: true,
   },
-  thumbnail: {
-    type: String, // Path to thumbnail image
+  duration: {
+    type: Number, // Duration in seconds
   },
-  autor_id: {
+  author: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    required: [true, 'Author is required'],
   },
-  aprobado: {
+  approved: {
     type: Boolean,
-    default: true,
+    default: true, // Auto-approve for development (change to false for production)
   },
-  fecha_creacion: {
-    type: Date,
-    default: Date.now,
+  likes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
+  dislikes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
+  views: {
+    type: Number,
+    default: 0,
+  },
+  fileSize: {
+    type: Number, // File size in bytes
   },
   // Soft delete fields
   isDeleted: {
@@ -40,26 +64,29 @@ const VideoSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
-  // Video metadata
-  duration: {
-    type: Number, // Duration in seconds
-  },
-  fileSize: {
-    type: Number, // File size in bytes
-  },
-  views: {
-    type: Number,
-    default: 0,
-  },
 }, {
-  timestamps: true,
+  timestamps: true, // Adds createdAt and updatedAt
 });
 
+// Virtual for like count
+VideoSchema.virtual('likeCount').get(function () {
+  return this.likes ? this.likes.length : 0;
+});
+
+// Virtual for dislike count
+VideoSchema.virtual('dislikeCount').get(function () {
+  return this.dislikes ? this.dislikes.length : 0;
+});
+
+// Ensure virtuals are included in JSON
+VideoSchema.set('toJSON', { virtuals: true });
+VideoSchema.set('toObject', { virtuals: true });
+
 // Indexes for better query performance
-VideoSchema.index({ autor_id: 1 });
-VideoSchema.index({ fecha_creacion: -1 }); // Descending for newest first
-VideoSchema.index({ aprobado: 1, isDeleted: 1 });
-VideoSchema.index({ titulo: 'text', descripcion: 'text' }); // Text search
+VideoSchema.index({ author: 1 });
+VideoSchema.index({ createdAt: -1 }); // Descending for newest first
+VideoSchema.index({ approved: 1, isDeleted: 1 });
+VideoSchema.index({ title: 'text', description: 'text' }); // Text search
 
 // Query middleware to exclude soft-deleted videos by default
 VideoSchema.pre(/^find/, function (next) {

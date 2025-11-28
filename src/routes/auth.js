@@ -24,11 +24,8 @@ router.post(
     body('email').isEmail().normalizeEmail(),
     body('password')
       .isString()
-      .isLength({ min: 8, max: 100 })
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-      .withMessage(
-        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-      ),
+      .isLength({ min: 6, max: 100 })
+      .withMessage('Password must be at least 6 characters long'),
     body('institution').optional().isString().isLength({ max: 120 }),
     body('role').optional().isIn(['Estudiante', 'Docente']),
     handleValidation,
