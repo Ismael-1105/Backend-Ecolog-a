@@ -46,6 +46,21 @@ const findByEmail = async (email, options = {}) => {
 };
 
 /**
+ * Find users by IDs
+ * @param {Array} userIds - Array of user IDs
+ * @param {Object} pagination - Pagination options
+ * @returns {Promise<Array>} Array of users
+ */
+const findByIds = async (userIds, pagination = {}) => {
+    const { skip = 0, limit = 20 } = pagination;
+
+    return await User.find({ _id: { $in: userIds } })
+        .skip(skip)
+        .limit(limit)
+        .select('name email profilePicture institution isVerified badges');
+};
+
+/**
  * Find all users with pagination
  * @param {Object} filters - Query filters
  * @param {Object} pagination - Pagination options
@@ -136,6 +151,7 @@ const restore = async (userId) => {
 module.exports = {
     findById,
     findByEmail,
+    findByIds,
     findAll,
     count,
     create,

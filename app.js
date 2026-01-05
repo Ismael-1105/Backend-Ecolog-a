@@ -27,6 +27,9 @@ try {
 const authRoutes = require('./src/routes/auth');
 const userRoutes = require('./src/routes/users');
 const videoRoutes = require('./src/routes/videos');
+const categoryRoutes = require('./src/routes/categories');
+const badgeRoutes = require('./src/routes/badges');
+const commentRoutes = require('./src/routes/comments');
 const errorHandler = require('./src/middlewares/error');
 
 const app = express();
@@ -97,6 +100,9 @@ if (swaggerUi && swaggerFile) {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/videos', videoRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/badges', badgeRoutes);
+app.use('/api/comments', commentRoutes.standalone); // Standalone comment routes
 
 // Root endpoint
 app.get('/', (req, res) => {

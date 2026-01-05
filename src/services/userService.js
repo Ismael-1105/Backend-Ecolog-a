@@ -67,13 +67,13 @@ const updateUser = async (userId, updateData, requesterId, requesterRole) => {
     }
 
     // Fields that users can update themselves
-    const allowedFields = ['name', 'institution'];
+    const allowedFields = ['name', 'institution', 'bio', 'location', 'website'];
 
     // Fields that only the user themselves can update
     const selfOnlyFields = ['email'];
 
     // Fields that only admins can update
-    const adminOnlyFields = ['role'];
+    const adminOnlyFields = ['role', 'isVerified'];
 
     // Filter update data based on permissions
     const filteredData = {};
@@ -159,6 +159,122 @@ const updateProfilePicture = async (userId, file) => {
 };
 
 /**
+ * Follow a user
+ * @param {string} userId - User ID who is following
+ * @param {string} targetUserId - User ID to follow
+ * @returns {Promise<Object>} Updated user
+ */
+const followUser = async (userId, targetUserId) => {
+    // Can't follow yourself
+    if (userId === targetUserId) {
+        throw ErrorResponse.badRequest('Cannot follow yourself');
+    }
+
+    // Verify target user exists
+    const targetUser = await userRepository.findById(targetUserId);
+    if (!targetUser) {
+        throw ErrorResponse.notFound('User not found');
+    }
+
+    const user = await userRepository.findById(userId);
+
+    // Check if already following
+    if (user.following.includes(targetUserId)) {
+        throw ErrorResponse.badRequest('Already following this user');
+    }
+
+    // Add to following list
+    await userRepository.update(userId, {
+        $addToSet: { following: targetUserId },
+    });
+
+    // Add to target's followers list
+    await userRepository.update(targetUserId, {
+        $addToSet: { followers: userId },
+    });
+
+    logger.info('User followed', { userId, targetUserId });
+
+    return await userRepository.findById(userId);
+};
+
+/**
+ * Unfollow a user
+ * @param {string} userId - User ID who is unfollowing
+ * @param {string} targetUserId - User ID to unfollow
+ * @returns {Promise<Object>} Updated user
+ */
+const unfollowUser = async (userId, targetUserId) => {
+    // Can't unfollow yourself
+    if (userId === targetUserId) {
+        throw ErrorResponse.badRequest('Cannot unfollow yourself');
+    }
+
+    const user = await userRepository.findById(userId);
+
+    // Check if actually following
+    if (!user.following.includes(targetUserId)) {
+        throw ErrorResponse.badRequest('Not following this user');
+    }
+
+    // Remove from following list
+    await userRepository.update(userId, {
+        $pull: { following: targetUserId },
+    });
+
+    // Remove from target's followers list
+    await userRepository.update(targetUserId, {
+        $pull: { followers: userId },
+    });
+
+    logger.info('User unfollowed', { userId, targetUserId });
+
+    return await userRepository.findById(userId);
+};
+
+/**
+ * Get user's followers
+ * @param {string} userId - User ID
+ * @param {Object} query - Query parameters
+ * @returns {Promise<Object>} Paginated followers
+ */
+const getFollowers = async (userId, query) => {
+    const { page, limit, skip } = parsePaginationParams(query, 20, 100);
+
+    const user = await userRepository.findById(userId, { populate: true });
+    if (!user) {
+        throw ErrorResponse.notFound('User not found');
+    }
+
+    // Get populated followers
+    const followers = await userRepository.findByIds(user.followers, { skip, limit });
+    const totalCount = user.followers.length;
+
+    return createPaginatedResponse(followers, page, limit, totalCount);
+};
+
+/**
+ * Get user's following
+ * @param {string} userId - User ID
+ * @param {Object} query - Query parameters
+ * @returns {Promise<Object>} Paginated following
+ */
+const getFollowing = async (userId, query) => {
+    const { page, limit, skip } = parsePaginationParams(query, 20, 100);
+
+    const user = await userRepository.findById(userId, { populate: true });
+    if (!user) {
+        throw ErrorResponse.notFound('User not found');
+    }
+
+    // Get populated following
+    const following = await userRepository.findByIds(user.following, { skip, limit });
+    const totalCount = user.following.length;
+
+    return createPaginatedResponse(following, page, limit, totalCount);
+};
+
+/**
  * Delete user (soft delete)
  * @param {string} userId - User ID
  * @param {string} requesterId - ID of user making the request
@@ -223,6 +339,10 @@ module.exports = {
     getAllUsers,
     updateUser,
     updateProfilePicture,
+    followUser,
+    unfollowUser,
+    getFollowers,
+    getFollowing,
     deleteUser,
     deleteOwnAccount,
 };

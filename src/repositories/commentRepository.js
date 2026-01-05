@@ -15,10 +15,41 @@ const findById = async (commentId, options = {}) => {
     let query = Comment.findById(commentId);
 
     if (options.populate) {
-        query = query.populate('autor_id', 'name profilePicture');
+        query = query
+            .populate('authorId', 'name profilePicture isVerified')
+            .populate('videoId', 'title');
+    }
+
+    if (options.includeDeleted) {
+        query = query.setOptions({ includeDeleted: true });
     }
 
     return await query;
+};
+
+/**
+ * Find all comments with filters and pagination
+ * @param {Object} filters - Query filters
+ * @param {Object} pagination - Pagination options
+ * @returns {Promise<Array>} Array of comments
+ */
+const findAll = async (filters = {}, pagination = {}) => {
+    const { skip = 0, limit = 20, sort = { createdAt: -1 }, populate = true } = pagination;
+
+    let query = Comment.find(filters);
+
+    if (populate) {
+        query = query.populate('authorId', 'name profilePicture isVerified badges');
+    }
+
+    if (pagination.includeDeleted) {
+        query = query.setOptions({ includeDeleted: true });
+    }
+
+    return await query
+        .sort(sort)
+        .skip(skip)
+        .limit(limit);
 };
 
 /**
@@ -28,38 +59,54 @@ const findById = async (commentId, options = {}) => {
  * @returns {Promise<Array>} Array of comments
  */
 const findByVideoId = async (videoId, pagination = {}) => {
-    const { skip = 0, limit = 20, sort = { fecha_creacion: -1 } } = pagination;
-
-    return await Comment.find({ video_id: videoId })
-        .populate('autor_id', 'name profilePicture')
-        .sort(sort)
-        .skip(skip)
-        .limit(limit);
+    // Get only top-level comments (no parent)
+    return await findAll({ videoId, parentComment: null }, pagination);
 };
 
 /**
- * Find comments by author
- * @param {string} authorId - Author ID
+ * Find replies to a comment
+ * @param {string} parentCommentId - Parent comment ID
  * @param {Object} pagination - Pagination options
- * @returns {Promise<Array>} Array of comments
+ * @returns {Promise<Array>} Array of reply comments
  */
-const findByAuthorId = async (authorId, pagination = {}) => {
-    const { skip = 0, limit = 20, sort = { fecha_creacion: -1 } } = pagination;
-
-    return await Comment.find({ autor_id: authorId })
-        .populate('video_id', 'titulo')
-        .sort(sort)
-        .skip(skip)
-        .limit(limit);
+const findReplies = async (parentCommentId, pagination = {}) => {
+    return await findAll({ parentComment: parentCommentId }, pagination);
 };
 
 /**
- * Count comments for a video
- * @param {string} videoId - Video ID
+ * Find comment thread (comment + all nested replies)
+ * @param {string} commentId - Comment ID
+ * @param {number} maxDepth - Maximum nesting depth
+ * @returns {Promise<Object>} Comment with nested replies
+ */
+const findThread = async (commentId, maxDepth = 3) => {
+    const comment = await findById(commentId, { populate: true });
+
+    if (!comment || maxDepth <= 0) {
+        return comment;
+    }
+
+    // Recursively get replies
+    const replies = await findReplies(commentId, { populate: true });
+
+    if (replies.length > 0 && maxDepth > 1) {
+        comment.replies = await Promise.all(
+            replies.map(reply => findThread(reply._id.toString(), maxDepth - 1))
+        );
+    } else {
+        comment.replies = replies;
+    }
+
+    return comment;
+};
+
+/**
+ * Count comments
+ * @param {Object} filters - Query filters
  * @returns {Promise<number>} Count of comments
  */
-const countByVideoId = async (videoId) => {
-    return await Comment.countDocuments({ video_id: videoId });
+const count = async (filters = {}) => {
+    return await Comment.countDocuments(filters);
 };
 
 /**
@@ -69,7 +116,7 @@ const countByVideoId = async (videoId) => {
  */
 const create = async (commentData) => {
     const comment = await Comment.create(commentData);
-    return await comment.populate('autor_id', 'name profilePicture');
+    return await findById(comment._id, { populate: true });
 };
 
 /**
@@ -83,34 +130,87 @@ const update = async (commentId, updateData) => {
         commentId,
         updateData,
         { new: true, runValidators: true }
-    ).populate('autor_id', 'name profilePicture');
+    ).populate('authorId', 'name profilePicture isVerified');
 };
 
 /**
- * Delete comment
+ * Like a comment
+ * @param {string} commentId - Comment ID
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} Updated comment
+ */
+const like = async (commentId, userId) => {
+    // Remove from likes if already liked, add if not
+    const comment = await Comment.findById(commentId);
+
+    if (!comment) {
+        return null;
+    }
+
+    const hasLiked = comment.likes.includes(userId);
+
+    if (hasLiked) {
+        // Unlike
+        return await Comment.findByIdAndUpdate(
+            commentId,
+            { $pull: { likes: userId } },
+            { new: true }
+        ).populate('authorId', 'name profilePicture isVerified');
+    } else {
+        // Like
+        return await Comment.findByIdAndUpdate(
+            commentId,
+            { $addToSet: { likes: userId } },
+            { new: true }
+        ).populate('authorId', 'name profilePicture isVerified');
+    }
+};
+
+/**
+ * Soft delete comment
+ * @param {string} commentId - Comment ID
+ * @returns {Promise<Object>} Deleted comment
+ */
+const softDelete = async (commentId) => {
+    return await Comment.findByIdAndUpdate(
+        commentId,
+        { isDeleted: true, deletedAt: new Date() },
+        { new: true }
+    );
+};
+
+/**
+ * Hard delete comment (permanent)
  * @param {string} commentId - Comment ID
  * @returns {Promise<void>}
  */
-const deleteById = async (commentId) => {
+const hardDelete = async (commentId) => {
     return await Comment.findByIdAndDelete(commentId);
 };
 
 /**
  * Delete all comments for a video
  * @param {string} videoId - Video ID
- * @returns {Promise<Object>} Delete result
+ * @returns {Promise<void>}
  */
 const deleteByVideoId = async (videoId) => {
-    return await Comment.deleteMany({ video_id: videoId });
+    return await Comment.updateMany(
+        { videoId },
+        { isDeleted: true, deletedAt: new Date() }
+    );
 };
 
 module.exports = {
     findById,
+    findAll,
     findByVideoId,
-    findByAuthorId,
-    countByVideoId,
+    findReplies,
+    findThread,
+    count,
     create,
     update,
-    deleteById,
+    like,
+    softDelete,
+    hardDelete,
     deleteByVideoId,
 };
