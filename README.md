@@ -628,66 +628,146 @@ curl http://localhost:3001/api/health
 # En el navegador: http://localhost:3001/api-docs
 ```
 
-Si todo está correcto, deberías ver:
-- ✅ Servidor corriendo en `http://localhost:3001`
-- ✅ Documentación en `http://localhost:3001/api-docs`
-- ✅ Base de datos conectada
-- ✅ Logs en carpeta `./logs/`
+---
 
-### Autenticación (`/api/auth`)
+## 📡 API Endpoints Principales
 
-| Método | Endpoint | Descripción | Acceso |
-|--------|----------|-------------|--------|
-| POST | `/register` | Registrar usuario | Público |
-| POST | `/login` | Iniciar sesión | Público |
-| POST | `/refresh` | Renovar access token | Público |
-| POST | `/logout` | Cerrar sesión | Privado |
-| POST | `/logout-all` | Cerrar sesión en todos los dispositivos | Privado |
-| PUT | `/change-password` | Cambiar contraseña | Privado |
+### Autenticación
 
-### Usuarios (`/api/users`)
+```
+POST   /api/auth/register         Registrar nuevo usuario
+POST   /api/auth/login            Iniciar sesión
+POST   /api/auth/refresh          Renovar access token
+POST   /api/auth/logout           Cerrar sesión
+PUT    /api/auth/change-password  Cambiar contraseña
+```
 
-| Método | Endpoint | Descripción | Acceso |
-|--------|----------|-------------|--------|
-| GET | `/me` | Obtener mi perfil | Privado |
-| PUT | `/me` | Actualizar mi perfil | Privado |
-| PUT | `/me/profile-picture` | Actualizar foto de perfil | Privado |
-| DELETE | `/me` | Eliminar mi cuenta | Privado |
-| GET | `/` | Listar usuarios | Admin |
-| GET | `/:id` | Obtener usuario | Privado |
-| PUT | `/:id` | Actualizar usuario | Privado/Admin |
-| DELETE | `/:id` | Eliminar usuario | Admin |
+### Usuarios
 
-### Videos (`/api/videos`)
+```
+GET    /api/users/me              Obtener mi perfil
+PUT    /api/users/me              Actualizar perfil
+PUT    /api/users/me/profile-picture   Cambiar foto de perfil
+DELETE /api/users/me              Eliminar mi cuenta
+GET    /api/users                 Listar usuarios (admin)
+GET    /api/users/:id             Obtener usuario
+```
 
-| Método | Endpoint | Descripción | Acceso |
-|--------|----------|-------------|--------|
-| POST | `/` | Subir video | Docente+ |
-| GET | `/` | Listar videos públicos | Público |
-| GET | `/pending` | Videos pendientes | Admin |
-| GET | `/author/:authorId` | Videos por autor | Público |
-| GET | `/:id` | Obtener video | Público |
-| PUT | `/:id` | Actualizar video | Privado |
-| PUT | `/:id/approve` | Aprobar video | Admin |
-| DELETE | `/:id` | Eliminar video | Privado |
+### Videos
 
-### Comentarios (`/api/videos/:videoId/comments`)
+```
+POST   /api/videos                Subir video (docentes)
+GET    /api/videos                Listar videos públicos
+GET    /api/videos/pending        Videos pendientes (admin)
+GET    /api/videos/:id            Obtener detalles de video
+PUT    /api/videos/:id            Actualizar video
+PUT    /api/videos/:id/approve    Aprobar video (admin)
+PUT    /api/videos/:id/reject     Rechazar video (admin)
+DELETE /api/videos/:id            Eliminar video
+```
 
-| Método | Endpoint | Descripción | Acceso |
-|--------|----------|-------------|--------|
-| POST | `/` | Crear comentario | Privado |
-| GET | `/` | Listar comentarios | Público |
-| PUT | `/:commentId` | Actualizar comentario | Privado |
-| DELETE | `/:commentId` | Eliminar comentario | Privado |
+### Categorías
 
-### Valoraciones (`/api/videos/:videoId/rate`)
+```
+GET    /api/categories            Listar categorías
+GET    /api/categories/:id        Obtener categoría
+POST   /api/categories            Crear categoría (admin)
+PUT    /api/categories/:id        Actualizar categoría (admin)
+DELETE /api/categories/:id        Eliminar categoría (admin)
+```
 
-| Método | Endpoint | Descripción | Acceso |
-|--------|----------|-------------|--------|
-| POST | `/` | Valorar video | Privado |
-| GET | `/` | Estadísticas de valoración | Público |
-| GET | `/me` | Mi valoración | Privado |
-| DELETE | `/` | Eliminar valoración | Privado |
+### Comentarios
+
+```
+POST   /api/videos/:id/comments       Crear comentario
+GET    /api/videos/:id/comments       Listar comentarios
+PUT    /api/videos/:id/comments/:cid  Actualizar comentario
+DELETE /api/videos/:id/comments/:cid  Eliminar comentario
+```
+
+### Valoraciones
+
+```
+POST   /api/videos/:id/ratings    Valorar video
+GET    /api/videos/:id/ratings    Ver valoraciones
+GET    /api/videos/:id/ratings/me Mi valoración
+DELETE /api/videos/:id/ratings/me Eliminar mi valoración
+```
+
+### Insignias
+
+```
+GET    /api/badges                Listar insignias
+GET    /api/badges/:id            Obtener insignia
+GET    /api/users/:id/badges      Insignias del usuario
+```
+
+---
+
+## 🔄 Ejemplos de Uso
+
+### Registro e Inicio de Sesión
+
+```bash
+# Registrar nuevo usuario
+curl -X POST http://localhost:3001/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "usuario@ejemplo.com",
+    "password": "MiPassword123!",
+    "firstName": "Juan",
+    "lastName": "Pérez",
+    "role": "STUDENT"
+  }'
+
+# Iniciar sesión
+curl -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "usuario@ejemplo.com",
+    "password": "MiPassword123!"
+  }'
+
+# Respuesta
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "550e8400e29b41d4a716...",
+  "user": {
+    "_id": "507f1f77bcf86cd799439011",
+    "email": "usuario@ejemplo.com",
+    "firstName": "Juan",
+    "role": "STUDENT"
+  }
+}
+```
+
+### Peticiones Autenticadas
+
+```bash
+# Guardar token en variable
+TOKEN="eyJhbGciOiJIUzI1NiIs..."
+
+# Obtener mi perfil
+curl -X GET http://localhost:3001/api/users/me \
+  -H "Authorization: Bearer $TOKEN"
+
+# Renovar token expirado
+curl -X POST http://localhost:3001/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken": "550e8400e29b41d4a716..."}'
+```
+
+### Subir Video (Docentes)
+
+```bash
+curl -X POST http://localhost:3001/api/videos \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "title=Mi Video de Ecología" \
+  -F "description=Video sobre biodiversidad" \
+  -F "categoryId=507f1f77bcf86cd799439012" \
+  -F "video=@video.mp4" \
+  -F "thumbnail=@thumbnail.jpg"
+```
 
 ---
 
@@ -748,87 +828,60 @@ POST /api/auth/refresh
 PUT /api/users/me
 Authorization: Bearer eyJhbGc...
 
-{
-  "name": "Juan Pérez Actualizado",
-  "email": "nuevo.email@example.com",
-  "institution": "Universidad de Loja"
-}
+### Autenticación (`/api/auth`)
 
-# Respuesta
-{
-  "success": true,
-  "data": {
-    "_id": "...",
-    "name": "Juan Pérez Actualizado",
-    "email": "nuevo.email@example.com",
-    "institution": "Universidad de Loja",
-    "role": "Estudiante"
-  },
-  "message": "Profile updated successfully"
-}
-```
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| POST | `/register` | Registrar usuario | Público |
+| POST | `/login` | Iniciar sesión | Público |
+| POST | `/refresh` | Renovar access token | Público |
+| POST | `/logout` | Cerrar sesión | Privado |
+| POST | `/logout-all` | Cerrar sesión en todos los dispositivos | Privado |
+| PUT | `/change-password` | Cambiar contraseña | Privado |
 
-### Subir Foto de Perfil
+### Usuarios (`/api/users`)
 
-```bash
-PUT /api/users/me/profile-picture
-Authorization: Bearer eyJhbGc...
-Content-Type: multipart/form-data
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| GET | `/me` | Obtener mi perfil | Privado |
+| PUT | `/me` | Actualizar mi perfil | Privado |
+| PUT | `/me/profile-picture` | Actualizar foto de perfil | Privado |
+| DELETE | `/me` | Eliminar mi cuenta | Privado |
+| GET | `/` | Listar usuarios | Admin |
+| GET | `/:id` | Obtener usuario | Privado |
+| PUT | `/:id` | Actualizar usuario | Privado/Admin |
+| DELETE | `/:id` | Eliminar usuario | Admin |
 
-profilePicture: [archivo de imagen]
+### Videos (`/api/videos`)
 
-# Respuesta
-{
-  "success": true,
-  "data": {
-    "_id": "...",
-    "name": "Juan Pérez",
-    "profilePicture": "storage/profile-pictures/profile-123-1234567890.jpg"
-  },
-  "message": "Profile picture updated successfully"
-}
-```
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| POST | `/` | Subir video | Docente+ |
+| GET | `/` | Listar videos públicos | Público |
+| GET | `/pending` | Videos pendientes | Admin |
+| GET | `/author/:authorId` | Videos por autor | Público |
+| GET | `/:id` | Obtener video | Público |
+| PUT | `/:id` | Actualizar video | Privado |
+| PUT | `/:id/approve` | Aprobar video | Admin |
+| DELETE | `/:id` | Eliminar video | Privado |
 
-**Formatos Permitidos**: JPEG, PNG, WebP  
-**Tamaño Máximo**: 5MB
+### Comentarios (`/api/videos/:videoId/comments`)
 
-### Eliminar Mi Cuenta
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| POST | `/` | Crear comentario | Privado |
+| GET | `/` | Listar comentarios | Público |
+| PUT | `/:commentId` | Actualizar comentario | Privado |
+| DELETE | `/:commentId` | Eliminar comentario | Privado |
 
-```bash
-DELETE /api/users/me
-Authorization: Bearer eyJhbGc...
+### Valoraciones (`/api/videos/:videoId/rate`)
 
-{
-  "password": "MiContraseñaActual123!"
-}
-
-# Respuesta
-{
-  "success": true,
-  "message": "Account deleted successfully"
-}
-```
-
-**Nota**: Requiere contraseña para confirmar. La eliminación es reversible (soft delete).
-
-### Permisos de Edición por Rol
-
-| Campo | Usuario | Admin | SuperAdmin |
-|-------|---------|-------|------------|
-| `name` | ✅ | ✅ | ✅ |
-| `institution` | ✅ | ✅ | ✅ |
-| `email` | ✅ (propio) | ✅ | ✅ |
-| `role` | ❌ | ✅ | ✅ |
-| `password` | Solo via `/auth/change-password` | - | - |
-
-### Restricciones de Registro
-
-- ✅ **Estudiante**: Puede auto-registrarse
-- ✅ **Docente**: Puede auto-registrarse
-- ❌ **Administrador**: Solo asignado por SuperAdmin
-- ❌ **SuperAdmin**: Solo asignado manualmente en BD
-
----
+| Método | Endpoint | Descripción | Acceso |
+|--------|----------|-------------|--------|
+| POST | `/` | Valorar video | Privado |
+| GET | `/` | Estadísticas de valoración | Público |
+| GET | `/me` | Mi valoración | Privado |
+| DELETE | `/` | Eliminar valoración | Privado |
 
 ---
 
@@ -846,60 +899,81 @@ npm run test:unit
 # Solo tests de integración
 npm run test:integration
 
-# Modo watch
+# Modo watch (reinicia al cambiar tests)
 npm run test:watch
 ```
 
 ### Estructura de Tests
 
 ```
-src/tests/
+tests/
 ├── unit/
 │   ├── services/
-│   └── utils/
+│   ├── utils/
+│   └── models/
 └── integration/
     ├── auth.test.js
     ├── users.test.js
     └── videos.test.js
 ```
 
+### Cobertura de Código
+
+Objetivo: **Cobertura >80%**
+
+```bash
+npm test -- --coverage
+```
+
 ---
 
 ## 📚 Documentación API
 
-### Swagger UI
+### Swagger UI - Documentación Interactiva
 
-Documentación interactiva disponible en:
+Accede a la documentación en vivo:
 
 ```
 http://localhost:3001/api-docs
 ```
 
-### Características de la Documentación
-- Todos los endpoints documentados
-- Esquemas de datos completos
-- Ejemplos de peticiones/respuestas
-- Prueba de endpoints en vivo
-- Autenticación Bearer token integrada
+**Características:**
+- ✅ Todos los endpoints documentados
+- ✅ Esquemas de datos con ejemplos
+- ✅ Prueba de endpoints en vivo
+- ✅ Autenticación Bearer token integrada
+- ✅ Códigos de respuesta HTTP
+
+### Generar Documentación
+
+```bash
+# Generar swagger-output.json automáticamente
+npm run swagger-autogen
+```
 
 ---
 
-## 📊 Logging
+## 📊 Logging Profesional
 
 ### Niveles de Log
 
-- **error**: Errores críticos
-- **warn**: Advertencias
-- **info**: Información general
-- **debug**: Información de depuración
+| Nivel | Uso | Ejemplo |
+|-------|-----|---------|
+| **error** | Errores críticos | Validaciones fallidas, errores BD |
+| **warn** | Advertencias | Rate limit alcanzado, token próximo a expirar |
+| **info** | Eventos importantes | Login usuario, video subido |
+| **debug** | Información de depuración | Parámetros de request, estado intermedio |
 
 ### Archivos de Log
 
+Se generan automáticamente con rotación diaria:
+
 ```
 logs/
-├── error-2025-11-26.log      # Solo errores
-├── combined-2025-11-26.log   # Todos los logs
-└── ...
+├── error-2025-01-04.log       # Solo errores
+├── combined-2025-01-04.log    # Todos los niveles
+├── error-2025-01-03.log       # Logs anteriores
+└── combined-2025-01-03.log
 ```
 
 ### Ejemplo de Log
@@ -908,114 +982,185 @@ logs/
 {
   "level": "info",
   "message": "User logged in successfully",
-  "timestamp": "2025-11-26 22:55:43",
+  "timestamp": "2025-01-04 15:30:45",
   "userId": "507f1f77bcf86cd799439011",
-  "email": "user@example.com",
-  "ip": "192.168.1.1"
+  "email": "usuario@ejemplo.com",
+  "ip": "192.168.1.1",
+  "userAgent": "Mozilla/5.0..."
 }
 ```
 
 ---
 
-## 🔧 Scripts Disponibles
-
-| Script | Comando | Descripción |
-|--------|---------|-------------|
-| **start** | `npm start` | Inicia servidor (producción) |
-| **dev** | `npm run dev` | Inicia con nodemon (desarrollo) |
-| **test** | `npm test` | Ejecuta tests con cobertura |
-| **test:unit** | `npm run test:unit` | Tests unitarios |
-| **test:integration** | `npm run test:integration` | Tests de integración |
-| **test:watch** | `npm run test:watch` | Tests en modo watch |
-| **lint** | `npm run lint` | Ejecuta ESLint |
-
----
-
-## 📈 Optimizaciones de Rendimiento
+## 📈 Optimizaciones y Rendimiento
 
 ### Índices de Base de Datos
-- Email de usuario (único)
-- Autor de video
-- Fecha de creación de video
-- Búsqueda de texto completo en videos
-- Índice compuesto para ratings
 
-### Paginación
-- Resultados paginados (10-50 por página)
-- Metadata de paginación incluida
-- Límites configurables
+Índices configurados para máximo rendimiento:
 
-### Soft Delete
-- Eliminación reversible
-- Consultas automáticamente filtradas
-- Opción de incluir eliminados
+```javascript
+// Usuario
+db.users.createIndex({ email: 1 }, { unique: true })
+db.users.createIndex({ createdAt: 1 })
+
+// Videos
+db.videos.createIndex({ authorId: 1 })
+db.videos.createIndex({ categoryId: 1 })
+db.videos.createIndex({ createdAt: -1 })
+
+// Búsqueda full-text
+db.videos.createIndex({ title: "text", description: "text" })
+
+// Ratings
+db.ratings.createIndex({ videoId: 1, userId: 1 }, { unique: true })
+```
+
+### Estrategias de Caching
+
+- Paginación: 10-50 items por página
+- Soft delete: Eliminaciones reversibles
+- Agregaciones eficientes de ratings
+
+### Paginación Inteligente
+
+Todas las listas soportan paginación:
+
+```bash
+# Ejemplo
+curl "http://localhost:3001/api/videos?page=1&limit=20"
+
+# Respuesta
+{
+  "success": true,
+  "data": [...],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 150,
+    "pages": 8
+  }
+}
+```
 
 ---
 
 ## 🚨 Manejo de Errores
 
-### Formato de Error Estándar
+### Formato Estándar de Error
 
 ```json
 {
   "success": false,
-  "error": "Error message",
-  "errorCode": "ERROR_CODE"
+  "error": {
+    "message": "Descripción del error",
+    "code": "ERROR_CODE",
+    "statusCode": 400
+  }
 }
 ```
 
 ### Códigos de Error Comunes
 
-- `TOKEN_MISSING` - Token de autorización faltante
-- `TOKEN_EXPIRED` - Token expirado
-- `INVALID_TOKEN` - Token inválido
-- `INVALID_CREDENTIALS` - Credenciales incorrectas
-- `EMAIL_EXISTS` - Email ya registrado
-- `NOT_FOUND` - Recurso no encontrado
-- `FORBIDDEN` - Acceso denegado
+| Código | HTTP | Descripción |
+|--------|------|-------------|
+| `TOKEN_MISSING` | 401 | Falta token de autorización |
+| `TOKEN_EXPIRED` | 401 | Token JWT expirado |
+| `INVALID_TOKEN` | 401 | Token inválido o no firmado |
+| `INVALID_CREDENTIALS` | 401 | Email o contraseña incorrectos |
+| `EMAIL_ALREADY_EXISTS` | 400 | Email ya registrado |
+| `NOT_FOUND` | 404 | Recurso no encontrado |
+| `FORBIDDEN` | 403 | Acceso denegado por rol |
+| `VALIDATION_ERROR` | 422 | Datos inválidos |
+| `RATE_LIMIT_EXCEEDED` | 429 | Demasiadas solicitudes |
+| `INTERNAL_ERROR` | 500 | Error interno del servidor |
 
 ---
 
-## 🔄 Próximas Mejoras
+## 🔧 Troubleshooting
 
-- [ ] Integración FFmpeg para thumbnails
+### Problema: Conexión a MongoDB rechazada
+
+**Solución:**
+```bash
+# Verificar que MongoDB está corriendo
+mongod --version
+
+# Revisar MONGODB_URI en .env
+# Usar Atlas: mongodb+srv://usuario:pass@cluster.mongodb.net/db
+# Local: mongodb://localhost:27017/ecolearn
+```
+
+### Problema: Puerto 3001 ya está en uso
+
+**Solución:**
+```bash
+# Cambiar puerto en .env
+PORT=3002
+
+# O liberar el puerto
+# En Windows: netstat -ano | findstr :3001
+# En Linux/Mac: lsof -i :3001
+```
+
+### Problema: Cloudinary no funciona
+
+**Solución:**
+```bash
+# Verificar credenciales en .env:
+# CLOUDINARY_CLOUD_NAME, API_KEY, API_SECRET
+
+# Probar conectividad
+curl https://api.cloudinary.com/v1_1/tu_cloud_name/resource_type/type/authenticated_tag -u api_key:api_secret
+```
+
+---
+
+## 🚀 Próximas Mejoras
+
+- [ ] Integración FFmpeg para miniaturas automáticas
 - [ ] Streaming HLS adaptativo
-- [ ] Caché con Redis
-- [ ] Servicio de email
+- [ ] Caché con Redis para mejor rendimiento
+- [ ] Servicio de email (confirmación, reset)
 - [ ] Limpieza automática de archivos
-- [ ] Monitoreo con APM
-- [ ] Tests completos (cobertura 80%+)
+- [ ] Monitoreo con APM (New Relic/Datadog)
+- [ ] Tests con cobertura 80%+
+- [ ] Sistema de notificaciones en tiempo real (Socket.io)
+- [ ] Exportación de reportes
 
 ---
 
-## 👨‍💻 Autor
+## 👨‍💻 Contribuyentes
 
-**Ismael Gonzalez**  
+**Desarrollador Principal:** Ismael Gonzalez  
 Email: castroismael571@gmail.com
 
 ---
 
 ## 📄 Licencia
 
-ISC
+ISC License - Ver detalles en LICENSE
 
 ---
 
-## 📞 Soporte
+## 📞 Soporte y Contacto
 
-Para preguntas, bugs o sugerencias:
-- Email: castroismael571@gmail.com
-- Issues: GitHub repository
+¿Necesitas ayuda? Contáctanos:
 
----
-
-## 🎓 Documentos Adicionales
-
-- [OPTIMIZATION_SUMMARY.md](./OPTIMIZATION_SUMMARY.md) - Resumen completo de optimizaciones
-- [.env.example](./.env.example) - Plantilla de variables de entorno
+- **Email:** admin@ecolearn.edu.ec
+- **Issues:** GitHub Issues
+- **Documentación:** [Swagger API Docs](http://localhost:3001/api-docs)
 
 ---
 
-**Versión**: 2.0.0  
-**Última Actualización**: 2025-11-26  
-**Estado**: ✅ Producción Ready
+## 📋 Recursos Adicionales
+
+- [Optimizaciones - OPTIMIZATION_SUMMARY.md](./OPTIMIZATION_SUMMARY.md)
+- [Variables de Entorno - .env.example](./.env.example)
+- [API Reference - Swagger](http://localhost:3001/api-docs)
+
+---
+
+**Versión:** 2.0.0  
+**Última Actualización:** 4 de enero de 2026  
+**Estado:** ✅ Producción Ready  
+**Node.js Mínimo:** 18.0.0
