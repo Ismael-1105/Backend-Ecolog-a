@@ -177,11 +177,12 @@ const checkBadgeCondition = (user, criteria) => {
             // This would need additional logic to count approved videos
             return user.stats.videosUploaded >= criteria.threshold;
 
-        case 'days_active':
+        case 'days_active': {
             const daysActive = Math.floor(
                 (Date.now() - user.createdAt) / (1000 * 60 * 60 * 24)
             );
             return daysActive >= criteria.threshold;
+        }
 
         default:
             return false;

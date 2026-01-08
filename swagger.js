@@ -5,7 +5,7 @@ const doc = {
     title: "API de Ejemplo",
     description: "Documentación generada automáticamente con swagger-autogen",
   },
-  host: "localhost:3001",
+  host: "localhost:8080",
   schemes: ["http"],
 };
 

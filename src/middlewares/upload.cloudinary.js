@@ -1,5 +1,5 @@
 const multer = require('multer');
-const { videoStorage, thumbnailStorage, cloudinaryConfigured } = require('../config/cloudinary');
+const { cloudinaryConfigured } = require('../config/cloudinary');
 const ErrorResponse = require('../utils/ErrorResponse');
 
 /**

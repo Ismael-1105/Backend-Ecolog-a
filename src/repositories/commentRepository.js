@@ -1,8 +1,8 @@
-const Comment = require('../models/Comment');
+const VideoComment = require('../models/VideoComment');
 
 /**
  * Comment Repository
- * Handles database operations for Comment model
+ * Handles database operations for VideoComment model
  */
 
 /**
@@ -12,7 +12,7 @@ const Comment = require('../models/Comment');
  * @returns {Promise<Object>} Comment document
  */
 const findById = async (commentId, options = {}) => {
-    let query = Comment.findById(commentId);
+    let query = VideoComment.findById(commentId);
 
     if (options.populate) {
         query = query
@@ -36,7 +36,7 @@ const findById = async (commentId, options = {}) => {
 const findAll = async (filters = {}, pagination = {}) => {
     const { skip = 0, limit = 20, sort = { createdAt: -1 }, populate = true } = pagination;
 
-    let query = Comment.find(filters);
+    let query = VideoComment.find(filters);
 
     if (populate) {
         query = query.populate('authorId', 'name profilePicture isVerified badges');
@@ -90,11 +90,11 @@ const findThread = async (commentId, maxDepth = 3) => {
     const replies = await findReplies(commentId, { populate: true });
 
     if (replies.length > 0 && maxDepth > 1) {
-        comment.replies = await Promise.all(
+        VideoComment.replies = await Promise.all(
             replies.map(reply => findThread(reply._id.toString(), maxDepth - 1))
         );
     } else {
-        comment.replies = replies;
+        VideoComment.replies = replies;
     }
 
     return comment;
@@ -106,7 +106,7 @@ const findThread = async (commentId, maxDepth = 3) => {
  * @returns {Promise<number>} Count of comments
  */
 const count = async (filters = {}) => {
-    return await Comment.countDocuments(filters);
+    return await VideoComment.countDocuments(filters);
 };
 
 /**
@@ -115,7 +115,7 @@ const count = async (filters = {}) => {
  * @returns {Promise<Object>} Created comment
  */
 const create = async (commentData) => {
-    const comment = await Comment.create(commentData);
+    const comment = await VideoComment.create(commentData);
     return await findById(comment._id, { populate: true });
 };
 
@@ -126,7 +126,7 @@ const create = async (commentData) => {
  * @returns {Promise<Object>} Updated comment
  */
 const update = async (commentId, updateData) => {
-    return await Comment.findByIdAndUpdate(
+    return await VideoComment.findByIdAndUpdate(
         commentId,
         updateData,
         { new: true, runValidators: true }
@@ -141,24 +141,24 @@ const update = async (commentId, updateData) => {
  */
 const like = async (commentId, userId) => {
     // Remove from likes if already liked, add if not
-    const comment = await Comment.findById(commentId);
+    const comment = await VideoComment.findById(commentId);
 
     if (!comment) {
         return null;
     }
 
-    const hasLiked = comment.likes.includes(userId);
+    const hasLiked = VideoComment.likes.includes(userId);
 
     if (hasLiked) {
         // Unlike
-        return await Comment.findByIdAndUpdate(
+        return await VideoComment.findByIdAndUpdate(
             commentId,
             { $pull: { likes: userId } },
             { new: true }
         ).populate('authorId', 'name profilePicture isVerified');
     } else {
         // Like
-        return await Comment.findByIdAndUpdate(
+        return await VideoComment.findByIdAndUpdate(
             commentId,
             { $addToSet: { likes: userId } },
             { new: true }
@@ -172,7 +172,7 @@ const like = async (commentId, userId) => {
  * @returns {Promise<Object>} Deleted comment
  */
 const softDelete = async (commentId) => {
-    return await Comment.findByIdAndUpdate(
+    return await VideoComment.findByIdAndUpdate(
         commentId,
         { isDeleted: true, deletedAt: new Date() },
         { new: true }
@@ -185,7 +185,7 @@ const softDelete = async (commentId) => {
  * @returns {Promise<void>}
  */
 const hardDelete = async (commentId) => {
-    return await Comment.findByIdAndDelete(commentId);
+    return await VideoComment.findByIdAndDelete(commentId);
 };
 
 /**
@@ -194,7 +194,7 @@ const hardDelete = async (commentId) => {
  * @returns {Promise<void>}
  */
 const deleteByVideoId = async (videoId) => {
-    return await Comment.updateMany(
+    return await VideoComment.updateMany(
         { videoId },
         { isDeleted: true, deletedAt: new Date() }
     );

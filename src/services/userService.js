@@ -3,7 +3,6 @@ const { parsePaginationParams, createPaginatedResponse } = require('../utils/pag
 const ErrorResponse = require('../utils/ErrorResponse');
 const logger = require('../config/logger');
 const bcrypt = require('bcrypt');
-const path = require('path');
 const fs = require('fs').promises;
 
 /**

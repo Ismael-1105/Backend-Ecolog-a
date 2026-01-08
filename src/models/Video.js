@@ -49,7 +49,7 @@ const VideoSchema = new mongoose.Schema({
   // Moderation
   approved: {
     type: Boolean,
-    default: true, // Auto-approve for development (change to false for production)
+    default: false, // Requires approval for production security
   },
   approvedBy: {
     type: mongoose.Schema.Types.ObjectId,

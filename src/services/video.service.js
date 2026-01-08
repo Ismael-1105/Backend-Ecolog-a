@@ -120,7 +120,7 @@ class VideoService {
      * @param {string} adminId - ID of admin approving
      * @returns {Promise<Object>} Approved video
      */
-    async approveVideo(id, adminId) {
+    async approveVideo(id, _adminId) {
         const video = await videoRepository.findById(id);
 
         if (!video) {

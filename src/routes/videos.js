@@ -6,6 +6,7 @@ const rbac = require('../middlewares/rbac');
 const { cloudinaryUpload } = require('../middlewares/upload.cloudinary');
 const { body } = require('express-validator');
 const validate = require('../middlewares/validate');
+const commentRoutes = require('./comments');
 
 /**
  * Video Routes
@@ -103,5 +104,11 @@ router.put(
     rbac.requireRole(['Administrador', 'SuperAdmin']),
     videoController.approveVideo
 );
+
+/**
+ * Nested comment routes
+ * Mount comment routes under /:videoId/comments
+ */
+router.use('/:videoId/comments', commentRoutes);
 
 module.exports = router;

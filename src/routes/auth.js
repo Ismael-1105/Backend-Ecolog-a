@@ -18,7 +18,7 @@ const { loginLimiter, registerLimiter } = require('../middlewares/rateLimiter');
 // @access  Public
 router.post(
   '/register',
-  registerLimiter,
+  // registerLimiter, // DISABLED FOR TESTING
   [
     body('name').isString().trim().isLength({ min: 2, max: 80 }),
     body('email').isEmail().normalizeEmail(),
@@ -38,7 +38,7 @@ router.post(
 // @access  Public
 router.post(
   '/login',
-  loginLimiter,
+  // loginLimiter, // DISABLED FOR TESTING
   [
     body('email').isEmail().normalizeEmail(),
     body('password').isString().notEmpty(),

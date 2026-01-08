@@ -5,7 +5,7 @@
     "description": "Documentación generada automáticamente con swagger-autogen",
     "version": "1.0.0"
   },
-  "host": "localhost:3001",
+  "host": "localhost:8080",
   "basePath": "/",
   "schemes": [
     "http"
