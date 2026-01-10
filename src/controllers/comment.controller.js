@@ -1,7 +1,10 @@
-const Comment = require('../models/Comment');
-const Post = require('../models/Post');
+const CommentPostService = require('../services/commentPostService');
 const asyncHandler = require('../middlewares/asyncHandler');
-const ErrorResponse = require('../utils/ErrorResponse');
+
+/**
+ * Comment Controller
+ * Handles HTTP requests for post comment operations
+ */
 
 /**
  * @desc    Create a comment on a post
@@ -9,26 +12,15 @@ const ErrorResponse = require('../utils/ErrorResponse');
  * @access  Private
  */
 const createComment = asyncHandler(async (req, res) => {
-  const { content } = req.body;
+  const { content, parentComment } = req.body;
   const { postId } = req.params;
+  const userId = req.user.id;
 
-  if (!content) {
-    throw ErrorResponse.badRequest('Comment content is required');
-  }
-
-  // Verify post exists
-  const post = await Post.findById(postId);
-  if (!post) {
-    throw ErrorResponse.notFound('Post not found');
-  }
-
-  const comment = await Comment.create({
-    content,
-    post: postId,
-    author: req.user.id
-  });
-
-  await comment.populate('author', 'name profilePicture');
+  const comment = await CommentPostService.createComment(
+    postId,
+    { content, parentComment },
+    userId
+  );
 
   res.status(201).json({
     success: true,
@@ -43,37 +35,81 @@ const createComment = asyncHandler(async (req, res) => {
  */
 const getCommentsByPost = asyncHandler(async (req, res) => {
   const { postId } = req.params;
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  const skip = (page - 1) * limit;
+  const { page, limit, sort } = req.query;
 
-  // Verify post exists
-  const post = await Post.findById(postId);
-  if (!post) {
-    throw ErrorResponse.notFound('Post not found');
-  }
-
-  const comments = await Comment.find({ post: postId })
-    .populate('author', 'name profilePicture')
-    .sort({ createdAt: 1 })
-    .skip(skip)
-    .limit(limit);
-
-  const total = await Comment.countDocuments({ post: postId });
+  const result = await CommentPostService.getCommentsByPost(postId, { page, limit, sort });
 
   res.json({
     success: true,
-    data: comments,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit)
+    data: result.comments,
+    pagination: result.pagination
+  });
+});
+
+/**
+ * @desc    Update comment
+ * @route   PUT /api/post-comments/:id
+ * @access  Private
+ */
+const updateComment = asyncHandler(async (req, res) => {
+  const { content } = req.body;
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  const comment = await CommentPostService.updateComment(
+    req.params.id,
+    { content },
+    userId,
+    userRole
+  );
+
+  res.json({
+    success: true,
+    message: 'Comment updated successfully',
+    data: comment
+  });
+});
+
+/**
+ * @desc    Delete comment
+ * @route   DELETE /api/post-comments/:id
+ * @access  Private
+ */
+const deleteComment = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  const result = await CommentPostService.deleteComment(req.params.id, userId, userRole);
+
+  res.json({
+    success: true,
+    message: result.message
+  });
+});
+
+/**
+ * @desc    Like/unlike a comment
+ * @route   POST /api/post-comments/:id/like
+ * @access  Private
+ */
+const likeComment = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+
+  const result = await CommentPostService.toggleLike(req.params.id, userId);
+
+  res.json({
+    success: true,
+    message: result.liked ? 'Comment liked' : 'Comment unliked',
+    data: {
+      likeCount: result.likeCount
     }
   });
 });
 
 module.exports = {
   createComment,
-  getCommentsByPost
+  getCommentsByPost,
+  updateComment,
+  deleteComment,
+  likeComment
 };

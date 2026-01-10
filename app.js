@@ -34,6 +34,7 @@ const badgeRoutes = require('./src/routes/badges');
 const commentVideoRoutes = require('./src/routes/comments'); // Existing video comments
 const postRoutes = require('./src/routes/post.routes'); // New forum posts
 const commentPostRoutes = require('./src/routes/comment.routes'); // New forum comments
+const uploadRoutes = require('./src/routes/upload.routes'); // File uploads
 const errorHandler = require('./src/middlewares/error');
 
 const app = express();
@@ -112,6 +113,7 @@ app.use('/api/badges', badgeRoutes);
 app.use('/api/video-comments', commentVideoRoutes.standalone); // Video comment routes
 app.use('/api/posts', postRoutes); // Forum posts
 app.use('/api/post-comments', commentPostRoutes); // Forum post comments
+app.use('/api/uploads', uploadRoutes); // File uploads
 
 // Root endpoint
 app.get('/', (req, res) => {

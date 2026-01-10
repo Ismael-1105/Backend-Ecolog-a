@@ -1,6 +1,10 @@
-const Post = require('../models/Post');
+const PostService = require('../services/postService');
 const asyncHandler = require('../middlewares/asyncHandler');
-const ErrorResponse = require('../utils/ErrorResponse');
+
+/**
+ * Post Controller
+ * Handles HTTP requests for forum post operations
+ */
 
 /**
  * @desc    Create a new post
@@ -9,32 +13,9 @@ const ErrorResponse = require('../utils/ErrorResponse');
  */
 const createPost = asyncHandler(async (req, res) => {
   const { title, content, category } = req.body;
+  const userId = req.user && req.user.id ? req.user.id : null;
 
-  if (!title || !content) {
-    throw ErrorResponse.badRequest('Title and content are required');
-  }
-
-  if (!category) {
-    throw ErrorResponse.badRequest('Category is required');
-  }
-
-  const postData = {
-    title,
-    content,
-    category
-  };
-
-  // Only add author if user is authenticated
-  if (req.user && req.user.id) {
-    postData.author = req.user.id;
-  }
-
-  const post = await Post.create(postData);
-
-  // Only populate author if it exists
-  if (post.author) {
-    await post.populate('author', 'name profilePicture');
-  }
+  const post = await PostService.createPost({ title, content, category }, userId);
 
   res.status(201).json({
     success: true,
@@ -48,27 +29,14 @@ const createPost = asyncHandler(async (req, res) => {
  * @access  Public
  */
 const getPosts = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  const skip = (page - 1) * limit;
+  const { page, limit, sort, category } = req.query;
 
-  const posts = await Post.find()
-    .populate('author', 'name profilePicture')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
-
-  const total = await Post.countDocuments();
+  const result = await PostService.getPosts({ page, limit, sort, category });
 
   res.json({
     success: true,
-    data: posts,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit)
-    }
+    data: result.posts,
+    pagination: result.pagination
   });
 });
 
@@ -78,12 +46,7 @@ const getPosts = asyncHandler(async (req, res) => {
  * @access  Public
  */
 const getPost = asyncHandler(async (req, res) => {
-  const post = await Post.findById(req.params.id)
-    .populate('author', 'name profilePicture');
-
-  if (!post) {
-    throw ErrorResponse.notFound('Post not found');
-  }
+  const post = await PostService.getPostById(req.params.id);
 
   res.json({
     success: true,
@@ -91,8 +54,89 @@ const getPost = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Update post
+ * @route   PUT /api/posts/:id
+ * @access  Private
+ */
+const updatePost = asyncHandler(async (req, res) => {
+  const { title, content, category } = req.body;
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  const post = await PostService.updatePost(
+    req.params.id,
+    { title, content, category },
+    userId,
+    userRole
+  );
+
+  res.json({
+    success: true,
+    message: 'Post updated successfully',
+    data: post
+  });
+});
+
+/**
+ * @desc    Delete post
+ * @route   DELETE /api/posts/:id
+ * @access  Private
+ */
+const deletePost = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  const result = await PostService.deletePost(req.params.id, userId, userRole);
+
+  res.json({
+    success: true,
+    message: result.message
+  });
+});
+
+/**
+ * @desc    Like/unlike a post
+ * @route   POST /api/posts/:id/like
+ * @access  Private
+ */
+const likePost = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+
+  const result = await PostService.toggleLike(req.params.id, userId);
+
+  res.json({
+    success: true,
+    message: result.liked ? 'Post liked' : 'Post unliked',
+    data: {
+      likeCount: result.likeCount
+    }
+  });
+});
+
+/**
+ * @desc    Get posts by author
+ * @route   GET /api/posts/author/:authorId
+ * @access  Public
+ */
+const getPostsByAuthor = asyncHandler(async (req, res) => {
+  const { page, limit, sort } = req.query;
+
+  const result = await PostService.getPostsByAuthor(req.params.authorId, { page, limit, sort });
+
+  res.json({
+    success: true,
+    data: result.posts,
+    pagination: result.pagination
+  });
+});
+
 module.exports = {
   createPost,
   getPosts,
-  getPost
+  getPost,
+  updatePost,
+  deletePost,
+  likePost,
+  getPostsByAuthor
 };

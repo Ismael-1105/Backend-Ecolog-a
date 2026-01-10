@@ -72,7 +72,7 @@ const cloudinaryUpload = (req, res, next) => {
     const upload = multer({
         storage: multer.diskStorage({}), // Temporary storage, Cloudinary handles actual storage
         limits: {
-            fileSize: 500 * 1024 * 1024, // 500MB max
+            fileSize: 50 * 1024 * 1024, // 50MB max
         },
         fileFilter: fileFilter,
     }).fields([
@@ -85,7 +85,7 @@ const cloudinaryUpload = (req, res, next) => {
         if (err instanceof multer.MulterError) {
             // Multer-specific errors
             if (err.code === 'LIMIT_FILE_SIZE') {
-                return next(new ErrorResponse('File too large. Video max: 500MB, Thumbnail max: 5MB', 413));
+                return next(new ErrorResponse('File too large. Video max: 50MB, Thumbnail max: 5MB', 413));
             } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
                 return next(new ErrorResponse(`Unexpected field: ${err.field}. Expected 'video' and 'thumbnail'`, 400));
             }
