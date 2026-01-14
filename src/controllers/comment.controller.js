@@ -101,7 +101,8 @@ const likeComment = asyncHandler(async (req, res) => {
     success: true,
     message: result.liked ? 'Comment liked' : 'Comment unliked',
     data: {
-      likeCount: result.likeCount
+      likeCount: result.likeCount,
+      likes: result.likes
     }
   });
 });

@@ -7,6 +7,7 @@ const fs = require('fs');
 const logger = require('./src/config/logger');
 const { apiLimiter } = require('./src/middlewares/rateLimiter');
 const { mongoSanitizeMiddleware, xssMiddleware } = require('./src/middlewares/sanitize');
+const { performanceMonitor, memoryMonitor } = require('./src/middlewares/performanceMonitor');
 
 // Swagger (optional)
 let swaggerUi = null;
@@ -80,8 +81,13 @@ app.use(cors(corsOptions));
 // Compression middleware
 app.use(compression());
 
-// Rate limiting - Apply to all API routes (DISABLED FOR TESTING)
-// app.use('/api', apiLimiter);
+// Rate limiting - Apply to all API routes
+if (process.env.NODE_ENV === 'production') {
+  app.use('/api', apiLimiter);
+  logger.info('Rate limiting enabled for production');
+} else {
+  logger.warn('Rate limiting disabled for development');
+}
 
 // Body parser
 app.use(express.json({ limit: '10mb' }));
@@ -92,6 +98,13 @@ app.use(mongoSanitizeMiddleware);
 
 // Data sanitization against XSS
 app.use(xssMiddleware);
+
+// Performance monitoring (track all requests)
+if (process.env.NODE_ENV === 'production') {
+  app.use(performanceMonitor);
+  app.use(memoryMonitor);
+  logger.info('Performance monitoring enabled for production');
+}
 
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));

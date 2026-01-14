@@ -85,13 +85,66 @@ class CommentPostService {
 
             const skip = (page - 1) * limit;
 
-            const comments = await Comment.find({ post: postId })
+            // Only fetch top-level comments (no parent)
+            const comments = await Comment.find({
+                post: postId,
+                parentComment: null
+            })
                 .populate('author', 'name profilePicture')
+                .populate({
+                    path: 'replies',
+                    populate: {
+                        path: 'author',
+                        select: 'name profilePicture'
+                    }
+                })
+                .populate({
+                    path: 'replies',
+                    populate: {
+                        path: 'replies',
+                        populate: {
+                            path: 'author',
+                            select: 'name profilePicture'
+                        }
+                    }
+                })
+                .populate({
+                    path: 'replies',
+                    populate: {
+                        path: 'replies',
+                        populate: {
+                            path: 'replies',
+                            populate: {
+                                path: 'author',
+                                select: 'name profilePicture'
+                            }
+                        }
+                    }
+                })
+                .populate({
+                    path: 'replies',
+                    populate: {
+                        path: 'replies',
+                        populate: {
+                            path: 'replies',
+                            populate: {
+                                path: 'replies',
+                                populate: {
+                                    path: 'author',
+                                    select: 'name profilePicture'
+                                }
+                            }
+                        }
+                    }
+                })
                 .sort(sort)
                 .skip(skip)
                 .limit(limit);
 
-            const total = await Comment.countDocuments({ post: postId });
+            const total = await Comment.countDocuments({
+                post: postId,
+                parentComment: null
+            });
 
             return {
                 comments,
@@ -271,6 +324,7 @@ class CommentPostService {
                 comment,
                 liked: likeIndex === -1,
                 likeCount: comment.likes.length,
+                likes: comment.likes
             };
         } catch (error) {
             if (error instanceof ErrorResponse) {

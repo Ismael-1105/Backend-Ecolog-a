@@ -59,8 +59,65 @@ const findAll = async (filters = {}, pagination = {}) => {
  * @returns {Promise<Array>} Array of comments
  */
 const findByVideoId = async (videoId, pagination = {}) => {
-    // Get only top-level comments (no parent)
-    return await findAll({ videoId, parentComment: null }, pagination);
+    const { skip = 0, limit = 20, sort = { createdAt: -1 }, populate = true } = pagination;
+
+    let query = VideoComment.find({ videoId, parentComment: null });
+
+    if (populate) {
+        query = query
+            .populate('authorId', 'name profilePicture isVerified badges')
+            .populate({
+                path: 'replies',
+                populate: {
+                    path: 'authorId',
+                    select: 'name profilePicture isVerified'
+                }
+            })
+            .populate({
+                path: 'replies',
+                populate: {
+                    path: 'replies',
+                    populate: {
+                        path: 'authorId',
+                        select: 'name profilePicture isVerified'
+                    }
+                }
+            })
+            .populate({
+                path: 'replies',
+                populate: {
+                    path: 'replies',
+                    populate: {
+                        path: 'replies',
+                        populate: {
+                            path: 'authorId',
+                            select: 'name profilePicture isVerified'
+                        }
+                    }
+                }
+            })
+            .populate({
+                path: 'replies',
+                populate: {
+                    path: 'replies',
+                    populate: {
+                        path: 'replies',
+                        populate: {
+                            path: 'replies',
+                            populate: {
+                                path: 'authorId',
+                                select: 'name profilePicture isVerified'
+                            }
+                        }
+                    }
+                }
+            });
+    }
+
+    return await query
+        .sort(sort)
+        .skip(skip)
+        .limit(limit);
 };
 
 /**

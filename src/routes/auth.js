@@ -1,5 +1,4 @@
 const express = require('express');
-const { body } = require('express-validator');
 const router = express.Router();
 const {
   registerUser,
@@ -9,27 +8,22 @@ const {
   logoutAllDevices,
   changePassword,
 } = require('../controllers/authController');
-const handleValidation = require('../middlewares/validate');
 const auth = require('../middlewares/auth');
 const { loginLimiter, registerLimiter } = require('../middlewares/rateLimiter');
+const {
+  registerValidator,
+  loginValidator,
+  changePasswordValidator,
+  refreshTokenValidator,
+} = require('../middlewares/validators/auth.validator');
 
 // @route   POST api/auth/register
 // @desc    Register user
 // @access  Public
 router.post(
   '/register',
-  // registerLimiter, // DISABLED FOR TESTING
-  [
-    body('name').isString().trim().isLength({ min: 2, max: 80 }),
-    body('email').isEmail().normalizeEmail(),
-    body('password')
-      .isString()
-      .isLength({ min: 6, max: 100 })
-      .withMessage('Password must be at least 6 characters long'),
-    body('institution').optional().isString().isLength({ max: 120 }),
-    body('role').optional().isIn(['Estudiante', 'Docente']),
-    handleValidation,
-  ],
+  registerLimiter, // Enable rate limiting for registration
+  registerValidator,
   registerUser
 );
 
@@ -38,21 +32,18 @@ router.post(
 // @access  Public
 router.post(
   '/login',
-  // loginLimiter, // DISABLED FOR TESTING
-  [
-    body('email').isEmail().normalizeEmail(),
-    body('password').isString().notEmpty(),
-    handleValidation,
-  ],
+  loginLimiter, // Enable rate limiting for login
+  loginValidator,
   loginUser
 );
+
 
 // @route   POST api/auth/refresh
 // @desc    Refresh access token
 // @access  Public
 router.post(
   '/refresh',
-  [body('refreshToken').isString().notEmpty(), handleValidation],
+  refreshTokenValidator,
   refreshToken
 );
 
@@ -62,7 +53,6 @@ router.post(
 router.post(
   '/logout',
   auth,
-  [body('refreshToken').optional().isString(), handleValidation],
   logoutUser
 );
 
@@ -77,18 +67,9 @@ router.post('/logout-all', auth, logoutAllDevices);
 router.put(
   '/change-password',
   auth,
-  [
-    body('currentPassword').isString().notEmpty(),
-    body('newPassword')
-      .isString()
-      .isLength({ min: 8, max: 100 })
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-      .withMessage(
-        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-      ),
-    handleValidation,
-  ],
+  changePasswordValidator,
   changePassword
 );
 
 module.exports = router;
+

@@ -1,8 +1,7 @@
-
 const app = require('./app');
 const dotenv = require('dotenv');
 const Joi = require('joi');
-const connectDB = require('./src/config/db');
+const { connectDB, closeDB } = require('./src/config/db');
 
 dotenv.config();
 
@@ -32,7 +31,39 @@ connectDB();
 
 const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`API Documentation available at http://localhost:${PORT}/api-docs`);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.error('Error:', err.name, err.message);
+  console.error('Stack:', err.stack);
+
+  // Close server & exit process
+  server.close(() => {
+    process.exit(1);
+  });
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.error('Error:', err.name, err.message);
+  console.error('Stack:', err.stack);
+  process.exit(1);
+});
+
+// Handle SIGTERM signal
+process.on('SIGTERM', async () => {
+  console.log('👋 SIGTERM RECEIVED. Shutting down gracefully');
+
+  // Close database connection
+  await closeDB();
+
+  server.close(() => {
+    console.log('💥 Process terminated!');
+  });
 });

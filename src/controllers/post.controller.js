@@ -46,7 +46,8 @@ const getPosts = asyncHandler(async (req, res) => {
  * @access  Public
  */
 const getPost = asyncHandler(async (req, res) => {
-  const post = await PostService.getPostById(req.params.id);
+  // Increment views when getting a single post
+  const post = await PostService.getPostById(req.params.id, true);
 
   res.json({
     success: true,
@@ -131,6 +132,84 @@ const getPostsByAuthor = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Dislike/un-dislike a post
+ * @route   POST /api/posts/:id/dislike
+ * @access  Private
+ */
+const dislikePost = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+
+  const result = await PostService.toggleDislike(req.params.id, userId);
+
+  res.json({
+    success: true,
+    message: result.disliked ? 'Post disliked' : 'Post un-disliked',
+    data: {
+      dislikeCount: result.dislikeCount
+    }
+  });
+});
+
+/**
+ * @desc    Search posts by text
+ * @route   GET /api/posts/search
+ * @access  Public
+ */
+const searchPosts = asyncHandler(async (req, res) => {
+  const { q, page, limit, category } = req.query;
+
+  if (!q) {
+    return res.status(400).json({
+      success: false,
+      error: 'Search query is required'
+    });
+  }
+
+  const result = await PostService.searchPosts(q, { page, limit, category });
+
+  res.json({
+    success: true,
+    data: result.posts,
+    pagination: result.pagination
+  });
+});
+
+/**
+ * @desc    Get trending posts
+ * @route   GET /api/posts/trending
+ * @access  Public
+ */
+const getTrendingPosts = asyncHandler(async (req, res) => {
+  const { limit, category, timeframe } = req.query;
+
+  const result = await PostService.getTrendingPosts({ limit, category, timeframe });
+
+  res.json({
+    success: true,
+    data: result.posts,
+    timeframe: result.timeframe
+  });
+});
+
+/**
+ * @desc    Pin/unpin a post
+ * @route   POST /api/posts/:id/pin
+ * @access  Private (Admin)
+ */
+const togglePinPost = asyncHandler(async (req, res) => {
+  const adminId = req.user.id;
+  const { pin = true } = req.body;
+
+  const post = await PostService.togglePin(req.params.id, adminId, pin);
+
+  res.json({
+    success: true,
+    message: pin ? 'Post pinned successfully' : 'Post unpinned successfully',
+    data: post
+  });
+});
+
 module.exports = {
   createPost,
   getPosts,
@@ -138,5 +217,9 @@ module.exports = {
   updatePost,
   deletePost,
   likePost,
+  dislikePost,
+  searchPosts,
+  getTrendingPosts,
+  togglePinPost,
   getPostsByAuthor
 };

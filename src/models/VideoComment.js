@@ -46,6 +46,13 @@ VideoCommentSchema.virtual('replyCount', {
     count: true
 });
 
+// Virtual for replies (nested comments)
+VideoCommentSchema.virtual('replies', {
+    ref: 'VideoComment',
+    localField: '_id',
+    foreignField: 'parentComment'
+});
+
 // Virtual for like count
 VideoCommentSchema.virtual('likeCount').get(function () {
     return this.likes ? this.likes.length : 0;
