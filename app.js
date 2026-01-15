@@ -59,34 +59,114 @@ app.use(
   })
 );
 
-// CORS - Dynamic whitelist from environment
+// ============================================================================
+// CORS Configuration - Production Ready
+// ============================================================================
+// This configuration handles:
+// 1. Cross-origin requests from allowed origins
+// 2. Preflight OPTIONS requests
+// 3. JWT tokens in Authorization header
+// 4. Cookies and credentials
+// 5. Local network access (192.168.x.x)
+// ============================================================================
+
 const corsOptions = {
+  // Origin validation function
   origin: function (origin, callback) {
-    // Default whitelist includes localhost and local network IP
+    // Default whitelist for development (localhost + local network)
     const defaultWhitelist = [
+      // Localhost variants
       'http://localhost:3000',
       'http://localhost:5173',
       'http://localhost:5174',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173',
+      // Local network IPs (add your specific IPs here)
       'http://192.168.0.112:3000',
       'http://192.168.0.112:5173',
-      'http://192.168.0.112:5174'
+      'http://192.168.0.112:5174',
+      'http://192.168.0.100:3000', // Backend server IP
+      'http://192.168.0.100:5173'
     ];
 
+    // Use environment variable if set, otherwise use default whitelist
     const whitelist = process.env.CORS_ORIGIN
       ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
       : defaultWhitelist;
 
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin || whitelist.indexOf(origin) !== -1 || whitelist.includes('*')) {
+    // Log for debugging (only in development)
+    if (process.env.NODE_ENV !== 'production') {
+      logger.info('CORS check', { origin, whitelist });
+    }
+
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+    if (!origin) {
+      logger.info('Request with no origin header - allowing');
+      return callback(null, true);
+    }
+
+    // Check if origin is in whitelist
+    if (whitelist.indexOf(origin) !== -1 || whitelist.includes('*')) {
       callback(null, true);
     } else {
-      logger.warn('CORS blocked request', { origin, whitelist });
-      callback(new Error('Not allowed by CORS'));
+      logger.warn('CORS blocked request', {
+        origin,
+        whitelist,
+        message: 'Origin not in whitelist'
+      });
+      callback(new Error(`CORS policy: Origin ${origin} is not allowed`));
     }
   },
+
+  // Allow credentials (cookies, authorization headers, TLS client certificates)
   credentials: true,
+
+  // Allowed HTTP methods
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+
+  // Allowed headers (IMPORTANT: include Authorization for JWT)
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin'
+  ],
+
+  // Exposed headers (headers that browser can access)
+  exposedHeaders: [
+    'Content-Length',
+    'Content-Type',
+    'Authorization'
+  ],
+
+  // Preflight cache duration (in seconds)
+  // Browser will cache preflight response for this duration
+  maxAge: 86400, // 24 hours
+
+  // Pass the CORS preflight response to the next handler
+  preflightContinue: false,
+
+  // Provide a status code to use for successful OPTIONS requests
+  optionsSuccessStatus: 204
 };
+
+// Apply CORS middleware
 app.use(cors(corsOptions));
+
+// ============================================================================
+// Explicit OPTIONS handler for preflight requests
+// ============================================================================
+// Some browsers/networks require explicit OPTIONS handling
+// This ensures preflight requests are handled correctly
+app.options('*', cors(corsOptions));
+
+// Log CORS configuration on startup
+logger.info('CORS configured', {
+  environment: process.env.NODE_ENV,
+  allowedOrigins: process.env.CORS_ORIGIN || 'default whitelist',
+  credentialsEnabled: true
+});
 
 // Compression middleware
 app.use(compression());
