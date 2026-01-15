@@ -4,8 +4,7 @@ const VideoCommentSchema = new mongoose.Schema({
     videoId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Video',
-        required: [true, 'Video is required'],
-        index: true
+        required: [true, 'Video is required']
     },
     authorId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -21,8 +20,7 @@ const VideoCommentSchema = new mongoose.Schema({
     parentComment: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'VideoComment',
-        default: null,
-        index: true
+        default: null
     },
     likes: [{
         type: mongoose.Schema.Types.ObjectId,

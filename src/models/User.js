@@ -139,7 +139,7 @@ UserSchema.set('toJSON', { virtuals: true });
 UserSchema.set('toObject', { virtuals: true });
 
 // Indexes for better query performance
-UserSchema.index({ email: 1 });
+// Note: email already has unique index from schema definition
 UserSchema.index({ isDeleted: 1 });
 UserSchema.index({ role: 1 });
 UserSchema.index({ points: -1 }); // For leaderboard
