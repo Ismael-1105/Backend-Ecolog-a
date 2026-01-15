@@ -62,15 +62,25 @@ app.use(
 // CORS - Dynamic whitelist from environment
 const corsOptions = {
   origin: function (origin, callback) {
+    // Default whitelist includes localhost and local network IP
+    const defaultWhitelist = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://192.168.0.112:3000',
+      'http://192.168.0.112:5173',
+      'http://192.168.0.112:5174'
+    ];
+
     const whitelist = process.env.CORS_ORIGIN
       ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
-      : ['http://localhost:3000'];
+      : defaultWhitelist;
 
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin || whitelist.indexOf(origin) !== -1 || whitelist.includes('*')) {
       callback(null, true);
     } else {
-      logger.warn('CORS blocked request', { origin });
+      logger.warn('CORS blocked request', { origin, whitelist });
       callback(new Error('Not allowed by CORS'));
     }
   },
