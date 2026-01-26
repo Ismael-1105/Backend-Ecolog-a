@@ -5,6 +5,7 @@ const ErrorResponse = require('../utils/ErrorResponse');
 /**
  * Upload Controller
  * Handles HTTP requests for file upload operations
+ * All routes require authentication
  */
 
 /**
@@ -13,21 +14,36 @@ const ErrorResponse = require('../utils/ErrorResponse');
  * @access  Private
  */
 exports.uploadSingleFile = asyncHandler(async (req, res, next) => {
+    // Validate file exists
     if (!req.file) {
-        return next(ErrorResponse.badRequest('No file uploaded', 'NO_FILE'));
+        return res.status(400).json({
+            success: false,
+            error: 'No file uploaded',
+            code: 'NO_FILE'
+        });
     }
 
     try {
+        // Process file metadata
         const fileMetadata = await UploadService.processFile(req.file);
+
+        // Save to database with user ID and metadata from request body
+        const upload = await UploadService.saveUploadToDatabase(
+            fileMetadata,
+            req.user.id,
+            req.body
+        );
 
         res.status(201).json({
             success: true,
             message: 'File uploaded successfully',
-            data: fileMetadata,
+            data: upload,
         });
     } catch (error) {
-        // Clean up file if processing fails
+        // Clean up file if database save fails
         await UploadService.cleanupFile(req.file);
+
+        // Re-throw to be handled by error middleware
         throw error;
     }
 });
@@ -38,8 +54,13 @@ exports.uploadSingleFile = asyncHandler(async (req, res, next) => {
  * @access  Private
  */
 exports.uploadMultipleFiles = asyncHandler(async (req, res, next) => {
+    // Validate files exist
     if (!req.files || req.files.length === 0) {
-        return next(ErrorResponse.badRequest('No files uploaded', 'NO_FILES'));
+        return res.status(400).json({
+            success: false,
+            error: 'No files uploaded',
+            code: 'NO_FILES'
+        });
     }
 
     try {
@@ -66,7 +87,11 @@ exports.deleteFile = asyncHandler(async (req, res, next) => {
     const { filename } = req.params;
 
     if (!filename) {
-        return next(ErrorResponse.badRequest('Filename is required', 'NO_FILENAME'));
+        return res.status(400).json({
+            success: false,
+            error: 'Filename is required',
+            code: 'NO_FILENAME'
+        });
     }
 
     // Get file info to verify it exists and belongs to user
@@ -93,7 +118,11 @@ exports.getFileInfo = asyncHandler(async (req, res, next) => {
     const { filename } = req.params;
 
     if (!filename) {
-        return next(ErrorResponse.badRequest('Filename is required', 'NO_FILENAME'));
+        return res.status(400).json({
+            success: false,
+            error: 'Filename is required',
+            code: 'NO_FILENAME'
+        });
     }
 
     const fileInfo = await UploadService.getFileInfo(filename, req.user.id);
@@ -111,7 +140,11 @@ exports.getFileInfo = asyncHandler(async (req, res, next) => {
  */
 exports.uploadImage = asyncHandler(async (req, res, next) => {
     if (!req.file) {
-        return next(ErrorResponse.badRequest('No image uploaded', 'NO_IMAGE'));
+        return res.status(400).json({
+            success: false,
+            error: 'No image uploaded',
+            code: 'NO_IMAGE'
+        });
     }
 
     try {
@@ -135,7 +168,11 @@ exports.uploadImage = asyncHandler(async (req, res, next) => {
  */
 exports.uploadVideo = asyncHandler(async (req, res, next) => {
     if (!req.file) {
-        return next(ErrorResponse.badRequest('No video uploaded', 'NO_VIDEO'));
+        return res.status(400).json({
+            success: false,
+            error: 'No video uploaded',
+            code: 'NO_VIDEO'
+        });
     }
 
     try {
@@ -158,20 +195,114 @@ exports.uploadVideo = asyncHandler(async (req, res, next) => {
  * @access  Private
  */
 exports.uploadDocument = asyncHandler(async (req, res, next) => {
+    // Validate file exists
     if (!req.file) {
-        return next(ErrorResponse.badRequest('No document uploaded', 'NO_DOCUMENT'));
+        return res.status(400).json({
+            success: false,
+            error: 'No document uploaded',
+            code: 'NO_DOCUMENT'
+        });
     }
 
     try {
+        // Process file metadata
         const fileMetadata = await UploadService.processFile(req.file);
+
+        // Save to database with user ID and metadata from request body
+        const upload = await UploadService.saveUploadToDatabase(
+            fileMetadata,
+            req.user.id,
+            req.body
+        );
 
         res.status(201).json({
             success: true,
             message: 'Document uploaded successfully',
-            data: fileMetadata,
+            data: upload,
         });
     } catch (error) {
+        // Clean up file if database save fails
         await UploadService.cleanupFile(req.file);
+
+        // Re-throw to be handled by error middleware
         throw error;
     }
+});
+
+/**
+ * @route   GET /api/uploads
+ * @desc    Get all uploads with pagination and filters
+ * @access  Private
+ */
+exports.getAllUploads = asyncHandler(async (req, res, next) => {
+    const { fileType, category, search, page, limit, sort } = req.query;
+
+    const filters = { fileType, category, search };
+    const pagination = { page, limit, sort };
+
+    const result = await UploadService.getAllUploads(filters, pagination);
+
+    res.status(200).json({
+        success: true,
+        data: result.uploads,
+        pagination: result.pagination,
+    });
+});
+
+/**
+ * @route   GET /api/uploads/my-files
+ * @desc    Get current user's uploads
+ * @access  Private
+ */
+exports.getMyUploads = asyncHandler(async (req, res, next) => {
+    const { page, limit, sort } = req.query;
+    const pagination = { page, limit, sort };
+
+    const result = await UploadService.getUserUploads(req.user.id, pagination);
+
+    res.status(200).json({
+        success: true,
+        data: result.uploads,
+        pagination: result.pagination,
+    });
+});
+
+/**
+ * @route   PATCH /api/uploads/:id
+ * @desc    Update upload metadata
+ * @access  Private
+ */
+exports.updateUploadMetadata = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const { title, description, category } = req.body;
+
+    const upload = await UploadService.updateUploadMetadata(
+        id,
+        { title, description, category },
+        req.user.id
+    );
+
+    res.status(200).json({
+        success: true,
+        message: 'Upload metadata updated successfully',
+        data: upload,
+    });
+});
+
+/**
+ * @route   POST /api/uploads/:id/download
+ * @desc    Increment download counter
+ * @access  Private
+ */
+exports.incrementDownloads = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+
+    const upload = await UploadService.incrementDownloads(id);
+
+    res.status(200).json({
+        success: true,
+        data: {
+            downloads: upload.downloads,
+        },
+    });
 });

@@ -5,6 +5,7 @@ const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 const logger = require('./src/config/logger');
+const { requestIdMiddleware, httpLogger, httpLoggerWithErrors } = require('./src/middlewares/httpLogger');
 const { apiLimiter } = require('./src/middlewares/rateLimiter');
 const { mongoSanitizeMiddleware, xssMiddleware } = require('./src/middlewares/sanitize');
 const { performanceMonitor, memoryMonitor } = require('./src/middlewares/performanceMonitor');
@@ -159,7 +160,8 @@ app.use(cors(corsOptions));
 // ============================================================================
 // Some browsers/networks require explicit OPTIONS handling
 // This ensures preflight requests are handled correctly
-app.options('*', cors(corsOptions));
+// Note: Using regex /.*/ instead of '*' for compatibility with Express 5.x and path-to-regexp v8+
+app.options(/.*/, cors(corsOptions));
 
 // Log CORS configuration on startup
 logger.info('CORS configured', {
@@ -170,6 +172,21 @@ logger.info('CORS configured', {
 
 // Compression middleware
 app.use(compression());
+
+// ============================================================================
+// HTTP Request Logging
+// ============================================================================
+// Add request ID to all requests for tracing
+app.use(requestIdMiddleware);
+
+// Log all HTTP requests with Morgan + Winston
+if (process.env.ENABLE_HTTP_LOGGING !== 'false') {
+  app.use(httpLogger);
+  app.use(httpLoggerWithErrors);
+  logger.info('HTTP request logging enabled');
+} else {
+  logger.warn('HTTP request logging disabled');
+}
 
 // Rate limiting - Apply to all API routes
 if (process.env.NODE_ENV === 'production') {

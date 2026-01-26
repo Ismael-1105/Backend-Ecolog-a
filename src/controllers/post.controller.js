@@ -1,4 +1,5 @@
 const PostService = require('../services/postService');
+const UploadService = require('../services/uploadService');
 const asyncHandler = require('../middlewares/asyncHandler');
 
 /**
@@ -15,12 +16,44 @@ const createPost = asyncHandler(async (req, res) => {
   const { title, content, category } = req.body;
   const userId = req.user && req.user.id ? req.user.id : null;
 
-  const post = await PostService.createPost({ title, content, category }, userId);
+  try {
+    // Process file attachments if present
+    let attachments = [];
+    if (req.file) {
+      // Single file upload
+      const fileMetadata = await UploadService.processFile(req.file);
+      attachments.push(fileMetadata);
+    } else if (req.files && req.files.length > 0) {
+      // Multiple files upload
+      if (req.files.length > 5) {
+        // Cleanup files before throwing error
+        await UploadService.cleanupMultipleFiles(req.files);
+        return res.status(400).json({
+          success: false,
+          error: 'Maximum 5 files allowed per post'
+        });
+      }
+      attachments = await UploadService.processMultipleFiles(req.files);
+    }
 
-  res.status(201).json({
-    success: true,
-    data: post
-  });
+    const post = await PostService.createPost(
+      { title, content, category, attachments },
+      userId
+    );
+
+    res.status(201).json({
+      success: true,
+      data: post
+    });
+  } catch (error) {
+    // Cleanup uploaded files if post creation fails
+    if (req.file) {
+      await UploadService.cleanupFile(req.file);
+    } else if (req.files && req.files.length > 0) {
+      await UploadService.cleanupMultipleFiles(req.files);
+    }
+    throw error;
+  }
 });
 
 /**
@@ -88,7 +121,17 @@ const deletePost = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const userRole = req.user.role;
 
+  // Get post first to access attachments
+  const post = await PostService.getPostById(req.params.id);
+
+  // Delete the post (this checks authorization)
   const result = await PostService.deletePost(req.params.id, userId, userRole);
+
+  // Delete associated files if post had attachments
+  if (post.attachments && post.attachments.length > 0) {
+    const filePaths = post.attachments.map(att => att.path);
+    await UploadService.deleteMultipleFiles(filePaths);
+  }
 
   res.json({
     success: true,

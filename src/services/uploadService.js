@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const ErrorResponse = require('../utils/ErrorResponse');
 const logger = require('../config/logger');
+const Upload = require('../models/Upload');
 
 /**
  * Upload Service
@@ -278,6 +279,221 @@ class UploadService {
         } catch (error) {
             logger.error('Error searching directory', { error: error.message, directory });
             return null;
+        }
+    }
+
+    /**
+     * Save upload metadata to database
+     * @param {Object} fileMetadata - File metadata from processFile
+     * @param {string} userId - User ID who uploaded the file
+     * @param {Object} additionalData - Additional data (title, description, category)
+     * @returns {Object} Created upload document
+     */
+    static async saveUploadToDatabase(fileMetadata, userId, additionalData = {}) {
+        try {
+            const fileType = Upload.getFileTypeFromMimetype(fileMetadata.mimetype);
+
+            const uploadData = {
+                filename: fileMetadata.filename,
+                originalName: fileMetadata.originalName,
+                title: additionalData.title || fileMetadata.originalName,
+                description: additionalData.description || '',
+                category: additionalData.category || 'Otro',
+                mimetype: fileMetadata.mimetype,
+                size: fileMetadata.size,
+                fileType,
+                url: fileMetadata.url,
+                uploadedBy: userId,
+            };
+
+            const upload = await Upload.create(uploadData);
+            logger.info('Upload saved to database', { uploadId: upload._id, filename: upload.filename });
+
+            return upload;
+        } catch (error) {
+            logger.error('Error saving upload to database', {
+                error: error.message,
+                stack: error.stack,
+                uploadData: JSON.stringify(uploadData, null, 2)
+            });
+
+            // If it's a validation error, provide more details
+            if (error.name === 'ValidationError') {
+                const validationErrors = Object.values(error.errors).map(e => e.message);
+                throw ErrorResponse.badRequest(`Validation error: ${validationErrors.join(', ')}`, 'VALIDATION_ERROR');
+            }
+
+            throw ErrorResponse.internal('Error saving upload metadata');
+        }
+    }
+
+    /**
+     * Get all uploads with pagination and filters
+     * @param {Object} filters - Filter options (fileType, category, uploadedBy)
+     * @param {Object} pagination - Pagination options (page, limit, sort)
+     * @returns {Object} Uploads and pagination info
+     */
+    static async getAllUploads(filters = {}, pagination = {}) {
+        try {
+            const {
+                fileType,
+                category,
+                uploadedBy,
+                search,
+            } = filters;
+
+            const {
+                page = 1,
+                limit = 20,
+                sort = '-createdAt',
+            } = pagination;
+
+            // Build query
+            const query = {};
+            if (fileType) query.fileType = fileType;
+            if (category) query.category = category;
+            if (uploadedBy) query.uploadedBy = uploadedBy;
+            if (search) {
+                query.$text = { $search: search };
+            }
+
+            // Execute query with pagination
+            const skip = (page - 1) * limit;
+            const [uploads, total] = await Promise.all([
+                Upload.find(query)
+                    .populate('uploadedBy', 'name email')
+                    .sort(sort)
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+                Upload.countDocuments(query),
+            ]);
+
+            return {
+                uploads,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total,
+                    pages: Math.ceil(total / limit),
+                },
+            };
+        } catch (error) {
+            logger.error('Error getting uploads', { error: error.message });
+            throw ErrorResponse.internal('Error retrieving uploads');
+        }
+    }
+
+    /**
+     * Get uploads by user
+     * @param {string} userId - User ID
+     * @param {Object} pagination - Pagination options
+     * @returns {Object} User's uploads and pagination info
+     */
+    static async getUserUploads(userId, pagination = {}) {
+        return this.getAllUploads({ uploadedBy: userId }, pagination);
+    }
+
+    /**
+     * Update upload metadata
+     * @param {string} uploadId - Upload ID
+     * @param {Object} updates - Fields to update (title, description, category)
+     * @param {string} userId - User ID (for authorization)
+     * @returns {Object} Updated upload
+     */
+    static async updateUploadMetadata(uploadId, updates, userId) {
+        try {
+            const upload = await Upload.findById(uploadId);
+
+            if (!upload) {
+                throw ErrorResponse.notFound('Upload not found', 'UPLOAD_NOT_FOUND');
+            }
+
+            // Check if user owns the upload
+            if (upload.uploadedBy.toString() !== userId) {
+                throw ErrorResponse.forbidden('Not authorized to update this upload', 'NOT_AUTHORIZED');
+            }
+
+            // Update allowed fields
+            const allowedUpdates = ['title', 'description', 'category'];
+            allowedUpdates.forEach(field => {
+                if (updates[field] !== undefined) {
+                    upload[field] = updates[field];
+                }
+            });
+
+            await upload.save();
+            logger.info('Upload metadata updated', { uploadId: upload._id });
+
+            return upload;
+        } catch (error) {
+            if (error instanceof ErrorResponse) {
+                throw error;
+            }
+            logger.error('Error updating upload metadata', { error: error.message });
+            throw ErrorResponse.internal('Error updating upload');
+        }
+    }
+
+    /**
+     * Increment download counter
+     * @param {string} uploadId - Upload ID
+     * @returns {Object} Updated upload
+     */
+    static async incrementDownloads(uploadId) {
+        try {
+            const upload = await Upload.findById(uploadId);
+
+            if (!upload) {
+                throw ErrorResponse.notFound('Upload not found', 'UPLOAD_NOT_FOUND');
+            }
+
+            await upload.incrementDownloads();
+            logger.info('Download counter incremented', { uploadId: upload._id, downloads: upload.downloads });
+
+            return upload;
+        } catch (error) {
+            if (error instanceof ErrorResponse) {
+                throw error;
+            }
+            logger.error('Error incrementing downloads', { error: error.message });
+            throw ErrorResponse.internal('Error updating download counter');
+        }
+    }
+
+    /**
+     * Delete upload (file and database record)
+     * @param {string} uploadId - Upload ID
+     * @param {string} userId - User ID (for authorization)
+     * @returns {boolean} Success status
+     */
+    static async deleteUpload(uploadId, userId) {
+        try {
+            const upload = await Upload.findById(uploadId);
+
+            if (!upload) {
+                throw ErrorResponse.notFound('Upload not found', 'UPLOAD_NOT_FOUND');
+            }
+
+            // Check if user owns the upload
+            if (upload.uploadedBy.toString() !== userId) {
+                throw ErrorResponse.forbidden('Not authorized to delete this upload', 'NOT_AUTHORIZED');
+            }
+
+            // Delete file from filesystem
+            await this.deleteFile(upload.url.replace(/^\//, ''));
+
+            // Delete database record
+            await Upload.findByIdAndDelete(uploadId);
+
+            logger.info('Upload deleted successfully', { uploadId });
+            return true;
+        } catch (error) {
+            if (error instanceof ErrorResponse) {
+                throw error;
+            }
+            logger.error('Error deleting upload', { error: error.message });
+            throw ErrorResponse.internal('Error deleting upload');
         }
     }
 }

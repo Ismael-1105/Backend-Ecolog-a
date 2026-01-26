@@ -15,7 +15,7 @@ class PostService {
      * @returns {Object} Created post
      */
     static async createPost(postData, userId = null) {
-        const { title, content, category } = postData;
+        const { title, content, category, attachments = [] } = postData;
 
         // Validate required fields
         if (!title || !content) {
@@ -26,11 +26,17 @@ class PostService {
             throw ErrorResponse.badRequest('Category is required', 'MISSING_CATEGORY');
         }
 
+        // Validate attachments limit
+        if (attachments.length > 5) {
+            throw ErrorResponse.badRequest('Maximum 5 attachments allowed per post', 'TOO_MANY_ATTACHMENTS');
+        }
+
         try {
             const newPostData = {
                 title,
                 content,
                 category,
+                attachments
             };
 
             // Add author if user is authenticated
@@ -50,6 +56,7 @@ class PostService {
                 logger.info('Post created successfully', {
                     postId: post._id,
                     userId,
+                    attachmentsCount: attachments.length
                 });
 
                 return populatedPost;
@@ -58,6 +65,7 @@ class PostService {
             logger.info('Post created successfully', {
                 postId: post._id,
                 userId,
+                attachmentsCount: attachments.length
             });
 
             return post;

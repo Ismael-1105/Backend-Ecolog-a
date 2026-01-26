@@ -3,6 +3,7 @@ const router = express.Router();
 const protect = require('../middlewares/auth');
 const { requireAdmin } = require('../middlewares/rbac');
 const { validatePagination } = require('../middlewares/queryOptimizer');
+const { createUploadMiddleware } = require('../middlewares/upload.unified');
 const {
   createPost,
   getPosts,
@@ -17,6 +18,14 @@ const {
   getPostsByAuthor
 } = require('../controllers/post.controller');
 const commentRoutes = require('./comment.routes');
+
+// Configure upload middleware for post attachments
+// Allows images and documents, max 5 files, 10MB each
+const postUpload = createUploadMiddleware({
+  allowedTypes: ['image', 'document'],
+  maxSize: 10 * 1024 * 1024, // 10MB
+  baseDir: './uploads/posts'
+});
 
 // Public routes
 
@@ -37,8 +46,8 @@ router.get('/:id', getPost);
 
 // Protected routes (require authentication)
 
-// POST /api/posts - Create post
-router.post('/', protect, createPost);
+// POST /api/posts - Create post (with optional file attachments)
+router.post('/', protect, postUpload, createPost);
 
 // PUT /api/posts/:id - Update post
 router.put('/:id', protect, updatePost);
