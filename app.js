@@ -45,31 +45,22 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Security Middlewares
-// Helmet - Set security headers
-// Note: Configured for HTTP compatibility (VPS deployment)
+// Helmet - Minimal configuration for HTTP compatibility
+// Note: Most security headers disabled for HTTP deployment on VPS
+// Enable stricter policies when using HTTPS with reverse proxy
 app.use(
   helmet({
     // Allow cross-origin resource loading
     crossOriginResourcePolicy: { policy: 'cross-origin' },
 
-    // Disable Content Security Policy in development/HTTP
-    // Enable in production with HTTPS if needed
-    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'https:', 'http:'],
-        connectSrc: ["'self'"],
-      },
-    } : false,
-
-    // Disable HSTS (HTTP Strict Transport Security) for HTTP
-    // Only enable with HTTPS
-    hsts: false,
-
-    // Disable upgrade-insecure-requests for HTTP compatibility
+    // Disable all headers that can cause HTTPS upgrade issues
     contentSecurityPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    originAgentCluster: false,
+    hsts: false,
+    noSniff: false,
+    referrerPolicy: false,
   })
 );
 
