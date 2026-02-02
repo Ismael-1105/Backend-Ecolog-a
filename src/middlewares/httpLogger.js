@@ -41,8 +41,8 @@ const logFormat = process.env.NODE_ENV === 'production' ? productionFormat : dev
 
 // Skip function - don't log static files and health checks (optional)
 const skipLog = (req, res) => {
-    // Skip health check endpoint
-    if (req.url === '/health') return true;
+    // Skip health check endpoints
+    if (req.url === '/health' || req.url === '/api/health') return true;
 
     // Skip static files (optional - comment out if you want to log them)
     if (req.url.startsWith('/uploads/')) return true;
@@ -85,8 +85,8 @@ const httpLoggerWithErrors = (req, res, next) => {
         const { method, originalUrl, ip } = req;
         const { statusCode } = res;
 
-        // Log errors separately
-        if (statusCode >= 400) {
+        // Log errors separately (skip health checks)
+        if (statusCode >= 400 && !originalUrl.includes('/health')) {
             logger.warn('HTTP Error Response', {
                 requestId: req.id,
                 method,

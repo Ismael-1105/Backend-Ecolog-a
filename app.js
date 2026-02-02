@@ -99,14 +99,13 @@ const corsOptions = {
       ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
       : defaultWhitelist;
 
-    // Log for debugging (only in development)
-    if (process.env.NODE_ENV !== 'production') {
+    // Log for debugging (only in development, skip health checks)
+    if (process.env.NODE_ENV !== 'production' && !origin?.includes('/health')) {
       logger.info('CORS check', { origin, whitelist });
     }
 
     // Allow requests with no origin (mobile apps, Postman, curl, etc.)
     if (!origin) {
-      logger.info('Request with no origin header - allowing');
       return callback(null, true);
     }
 
@@ -257,6 +256,16 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Health check endpoint (also available at /api/health for external monitoring)
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 
 // 404 handler
 app.use((req, res) => {
