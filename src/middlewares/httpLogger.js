@@ -39,11 +39,8 @@ const developmentFormat = ':method :url :status :response-time ms - :res[content
 // Determine which format to use
 const logFormat = process.env.NODE_ENV === 'production' ? productionFormat : developmentFormat;
 
-// Skip function - don't log static files and health checks (optional)
+// Skip function - don't log static files (health checks are now logged for Graylog)
 const skipLog = (req, res) => {
-    // Skip health check endpoints
-    if (req.url === '/health' || req.url === '/api/health') return true;
-
     // Skip static files (optional - comment out if you want to log them)
     if (req.url.startsWith('/uploads/')) return true;
     if (req.url.match(/\.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$/)) return true;
@@ -85,8 +82,8 @@ const httpLoggerWithErrors = (req, res, next) => {
         const { method, originalUrl, ip } = req;
         const { statusCode } = res;
 
-        // Log errors separately (skip health checks)
-        if (statusCode >= 400 && !originalUrl.includes('/health')) {
+        // Log errors separately
+        if (statusCode >= 400) {
             logger.warn('HTTP Error Response', {
                 requestId: req.id,
                 method,
