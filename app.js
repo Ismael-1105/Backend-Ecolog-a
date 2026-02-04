@@ -80,6 +80,8 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Default whitelist for development (localhost + local network)
     const defaultWhitelist = [
+      // Production - Vercel deployment
+      'https://frontend-ecologia.vercel.app',
       // Localhost variants
       'http://localhost:3000',
       'http://localhost:5173',
