@@ -80,9 +80,10 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Default whitelist for development (localhost + local network)
     const defaultWhitelist = [
-      // Production - Vercel deployment
+      // Production domains - HTTPS only
+      'https://ecolearning.online',
       'https://frontend-ecologia.vercel.app',
-      // Localhost variants
+      // Development - Localhost variants
       'http://localhost:3000',
       'http://localhost:5173',
       'http://localhost:5174',
