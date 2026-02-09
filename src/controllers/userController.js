@@ -27,9 +27,12 @@ const getUserById = asyncHandler(async (req, res) => {
         req.user.role
     );
 
+    // Explicitly use toJSON() to apply the transform
+    const userResponse = user.toJSON();
+
     res.json({
         success: true,
-        data: user,
+        data: userResponse,
     });
 });
 
@@ -45,9 +48,12 @@ const getMyProfile = asyncHandler(async (req, res) => {
         req.user.role
     );
 
+    // Explicitly use toJSON() to apply the transform
+    const userResponse = user.toJSON();
+
     res.json({
         success: true,
-        data: user,
+        data: userResponse,
     });
 });
 
@@ -64,9 +70,12 @@ const updateUser = asyncHandler(async (req, res) => {
         req.user.role
     );
 
+    // Explicitly use toJSON() to apply the transform
+    const userResponse = user.toJSON();
+
     res.json({
         success: true,
-        data: user,
+        data: userResponse,
         message: 'User updated successfully',
     });
 });
@@ -84,9 +93,12 @@ const updateMyProfile = asyncHandler(async (req, res) => {
         req.user.role
     );
 
+    // Explicitly use toJSON() to apply the transform
+    const userResponse = user.toJSON();
+
     res.json({
         success: true,
-        data: user,
+        data: userResponse,
         message: 'Profile updated successfully',
     });
 });
@@ -109,9 +121,12 @@ const updateProfilePicture = asyncHandler(async (req, res) => {
         req.file
     );
 
+    // Explicitly use toJSON() to apply the transform
+    const userResponse = user.toJSON();
+
     res.json({
         success: true,
-        data: user,
+        data: userResponse,
         message: 'Profile picture updated successfully',
     });
 });

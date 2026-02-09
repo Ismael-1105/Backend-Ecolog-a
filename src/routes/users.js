@@ -15,30 +15,15 @@ const auth = require('../middlewares/auth');
 const { requireAdmin } = require('../middlewares/rbac');
 const handleValidation = require('../middlewares/validate');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 
-// Configure multer for profile pictures
-const ensureDirectoryExists = (dirPath) => {
-    if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-    }
-};
+// Import Cloudinary storage for profile pictures
+const { profilePictureStorage, cloudinaryConfigured } = require('../config/cloudinary');
 
-const profilePictureStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        // Use storage root for profile pictures, not UPLOAD_PATH (which is for videos)
-        const uploadPath = path.join('./storage', 'profile-pictures');
-        ensureDirectoryExists(uploadPath);
-        cb(null, uploadPath);
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = path.extname(file.originalname);
-        cb(null, `profile-${req.user.id}-${uniqueSuffix}${ext}`);
-    },
-});
+if (!cloudinaryConfigured) {
+    console.warn('⚠️  Cloudinary not configured. Profile picture uploads will not work.');
+}
 
+// Configure multer with Cloudinary storage
 const profilePictureUpload = multer({
     storage: profilePictureStorage,
     limits: {
@@ -46,15 +31,11 @@ const profilePictureUpload = multer({
     },
     fileFilter: (req, file, cb) => {
         const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
-        const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
 
-        const ext = path.extname(file.originalname).toLowerCase();
-        const mimeType = file.mimetype;
-
-        if (allowedMimeTypes.includes(mimeType) && allowedExtensions.includes(ext)) {
+        if (allowedMimeTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed'));
+            cb(new Error('Invalid file type. Only JPG, PNG, and WebP are allowed.'));
         }
     },
 });

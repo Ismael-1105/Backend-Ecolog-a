@@ -80,6 +80,23 @@ const thumbnailStorage = cloudinaryConfigured ? new CloudinaryStorage({
 }) : null;
 
 /**
+ * Storage configuration for profile pictures
+ */
+const profilePictureStorage = cloudinaryConfigured ? new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: `${process.env.CLOUDINARY_FOLDER || 'ecolearn-videos'}/profile-pictures`,
+        resource_type: 'image',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+        transformation: [
+            { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+            { quality: 'auto' },
+            { fetch_format: 'auto' }
+        ],
+    },
+}) : null;
+
+/**
  * Delete a file from Cloudinary
  * @param {string} publicId - The public ID of the file to delete
  * @param {string} resourceType - Type of resource ('video' or 'image')
@@ -126,6 +143,7 @@ module.exports = {
     cloudinary,
     videoStorage,
     thumbnailStorage,
+    profilePictureStorage,
     deleteFile,
     getVideoMetadata,
     cloudinaryConfigured

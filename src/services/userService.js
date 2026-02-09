@@ -120,7 +120,7 @@ const updateUser = async (userId, updateData, requesterId, requesterRole) => {
 /**
  * Update profile picture
  * @param {string} userId - User ID
- * @param {Object} file - Uploaded file
+ * @param {Object} file - Uploaded file (from Cloudinary)
  * @returns {Promise<Object>} Updated user
  */
 const updateProfilePicture = async (userId, file) => {
@@ -133,40 +133,56 @@ const updateProfilePicture = async (userId, file) => {
     logger.info('🖼️ Profile picture update started', {
         userId,
         fileName: file.filename,
-        originalPath: file.path,
+        cloudinaryPath: file.path,
         oldProfilePicture: user.profilePicture
     });
 
-    // Delete old profile picture if exists
+    // Delete old profile picture from Cloudinary if exists
     if (user.profilePicture) {
         try {
-            await fs.unlink(user.profilePicture);
-            logger.info('Old profile picture deleted', { path: user.profilePicture });
+            // Check if it's a Cloudinary URL
+            if (user.profilePicture.includes('cloudinary.com')) {
+                // Extract public_id from Cloudinary URL
+                const urlParts = user.profilePicture.split('/');
+                const uploadIndex = urlParts.indexOf('upload');
+                if (uploadIndex !== -1) {
+                    // Get everything after 'upload' and before the file extension
+                    const pathAfterUpload = urlParts.slice(uploadIndex + 1).join('/');
+                    const publicId = pathAfterUpload.replace(/\.[^/.]+$/, ''); // Remove extension
+
+                    const { deleteFile } = require('../config/cloudinary');
+                    await deleteFile(publicId, 'image');
+                    logger.info('✅ Old Cloudinary profile picture deleted', { publicId });
+                }
+            } else {
+                // Old local file - try to delete from local storage
+                const fs = require('fs').promises;
+                await fs.unlink(user.profilePicture);
+                logger.info('✅ Old local profile picture deleted', { path: user.profilePicture });
+            }
         } catch (error) {
-            logger.warn('Failed to delete old profile picture', {
+            logger.warn('⚠️ Failed to delete old profile picture', {
                 error: error.message,
                 path: user.profilePicture,
             });
         }
     }
 
-    // Update with new profile picture path
-    const profilePicturePath = file.path.replace(/\\/g, '/');
+    // Cloudinary already uploaded the file, just use the URL
+    const profilePictureUrl = file.path; // This is the full Cloudinary URL
 
-    logger.info('💾 Saving profile picture path to database', {
+    logger.info('💾 Saving Cloudinary URL to database', {
         userId,
-        relativePath: profilePicturePath,
-        baseUrl: process.env.BASE_URL || 'http://localhost:8080'
+        cloudinaryUrl: profilePictureUrl
     });
 
     const updatedUser = await userRepository.update(userId, {
-        profilePicture: profilePicturePath,
+        profilePicture: profilePictureUrl,
     });
 
-    logger.info('✅ Profile picture updated successfully', {
+    logger.info('✅ Profile picture updated successfully with Cloudinary', {
         userId,
-        savedPath: profilePicturePath,
-        returnedProfilePicture: updatedUser.profilePicture
+        cloudinaryUrl: profilePictureUrl
     });
 
     return updatedUser;

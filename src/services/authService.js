@@ -64,8 +64,13 @@ const registerUser = async (userData, deviceInfo = {}) => {
     });
 
     // Return user without password
-    const userResponse = user.toObject();
+    const userResponse = user.toJSON();
     delete userResponse.password;
+
+    logger.info('📸 Registration response profilePicture', {
+        userId: user._id,
+        profilePicture: userResponse.profilePicture
+    });
 
     return {
         user: userResponse,
@@ -137,8 +142,14 @@ const loginUser = async (email, password, deviceInfo = {}) => {
     });
 
     // Return user without password
-    const userResponse = user.toObject();
+    const userResponse = user.toJSON();
     delete userResponse.password;
+
+    logger.info('📸 Login response profilePicture', {
+        userId: user._id,
+        profilePicture: userResponse.profilePicture,
+        baseUrl: process.env.BASE_URL
+    });
 
     return {
         user: userResponse,
