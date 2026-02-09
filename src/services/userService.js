@@ -130,6 +130,13 @@ const updateProfilePicture = async (userId, file) => {
         throw ErrorResponse.notFound('User not found');
     }
 
+    logger.info('🖼️ Profile picture update started', {
+        userId,
+        fileName: file.filename,
+        originalPath: file.path,
+        oldProfilePicture: user.profilePicture
+    });
+
     // Delete old profile picture if exists
     if (user.profilePicture) {
         try {
@@ -145,13 +152,21 @@ const updateProfilePicture = async (userId, file) => {
 
     // Update with new profile picture path
     const profilePicturePath = file.path.replace(/\\/g, '/');
+
+    logger.info('💾 Saving profile picture path to database', {
+        userId,
+        relativePath: profilePicturePath,
+        baseUrl: process.env.BASE_URL || 'http://localhost:8080'
+    });
+
     const updatedUser = await userRepository.update(userId, {
         profilePicture: profilePicturePath,
     });
 
-    logger.info('Profile picture updated', {
+    logger.info('✅ Profile picture updated successfully', {
         userId,
-        newPath: profilePicturePath,
+        savedPath: profilePicturePath,
+        returnedProfilePicture: updatedUser.profilePicture
     });
 
     return updatedUser;
