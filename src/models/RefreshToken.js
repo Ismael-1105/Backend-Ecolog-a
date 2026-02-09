@@ -41,10 +41,10 @@ const RefreshTokenSchema = new mongoose.Schema({
 
 // Index for faster queries
 RefreshTokenSchema.index({ user: 1 });
-RefreshTokenSchema.index({ token: 1 });
-RefreshTokenSchema.index({ expiresAt: 1 });
+// Note: token already has unique index from schema definition
+// Note: expiresAt index is created below with TTL
 
-// Automatically delete expired tokens
+// Automatically delete expired tokens (TTL index)
 RefreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model('RefreshToken', RefreshTokenSchema);

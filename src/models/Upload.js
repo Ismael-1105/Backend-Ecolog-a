@@ -31,11 +31,11 @@ const uploadSchema = new mongoose.Schema(
         category: {
             type: String,
             trim: true,
+            required: [true, 'Category is required'],
             enum: {
-                values: ['Biodiversidad', 'Conservación', 'Educación Ambiental', 'Recursos Naturales', 'Otro'],
+                values: ['Biodiversidad', 'Conservación', 'Educación Ambiental', 'Recursos Naturales'],
                 message: '{VALUE} is not a valid category',
             },
-            default: 'Otro',
         },
         mimetype: {
             type: String,

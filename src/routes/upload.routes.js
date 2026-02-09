@@ -77,6 +77,13 @@ router.patch('/:id', uploadController.updateUploadMetadata);
 router.post('/:id/download', uploadController.incrementDownloads);
 
 /**
+ * @route   GET /api/uploads/download/:id
+ * @desc    Download a file
+ * @access  Private
+ */
+router.get('/download/:id', uploadController.downloadFile);
+
+/**
  * @route   GET /api/uploads/:filename
  * @desc    Get file information
  * @access  Private

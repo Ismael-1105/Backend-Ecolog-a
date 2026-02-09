@@ -1,9 +1,9 @@
-const app = require('./app');
 const dotenv = require('dotenv');
+dotenv.config();
+
+const app = require('./app');
 const Joi = require('joi');
 const { connectDB, closeDB } = require('./src/config/db');
-
-dotenv.config();
 
 // Validate environment variables
 const envSchema = Joi.object({

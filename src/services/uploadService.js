@@ -78,14 +78,18 @@ class UploadService {
      * @returns {string} Public URL
      */
     static generateFileUrl(file) {
-        // Extract relative path from the uploads directory
-        const uploadsIndex = file.path.indexOf('uploads');
-        if (uploadsIndex === -1) {
-            return `/uploads/${file.filename}`;
-        }
+        // Get upload root directory from env or default
+        const uploadRoot = path.resolve(process.env.UPLOAD_PATH || './uploads');
+        const filePath = path.resolve(file.path);
 
-        const relativePath = file.path.substring(uploadsIndex);
-        return `/${relativePath.replace(/\\/g, '/')}`;
+        // Calculate relative path from upload root to file
+        let relativePath = path.relative(uploadRoot, filePath);
+
+        // Normalize path separators to forward slashes
+        relativePath = relativePath.replace(/\\/g, '/');
+
+        // Ensure path starts with /uploads/
+        return `/uploads/${relativePath}`;
     }
 
     /**
@@ -290,15 +294,17 @@ class UploadService {
      * @returns {Object} Created upload document
      */
     static async saveUploadToDatabase(fileMetadata, userId, additionalData = {}) {
+        let uploadData; // Declare outside try block to avoid scope issues
+
         try {
             const fileType = Upload.getFileTypeFromMimetype(fileMetadata.mimetype);
 
-            const uploadData = {
+            uploadData = {
                 filename: fileMetadata.filename,
                 originalName: fileMetadata.originalName,
                 title: additionalData.title || fileMetadata.originalName,
                 description: additionalData.description || '',
-                category: additionalData.category || 'Otro',
+                category: additionalData.category,
                 mimetype: fileMetadata.mimetype,
                 size: fileMetadata.size,
                 fileType,
@@ -314,7 +320,7 @@ class UploadService {
             logger.error('Error saving upload to database', {
                 error: error.message,
                 stack: error.stack,
-                uploadData: JSON.stringify(uploadData, null, 2)
+                uploadData: uploadData ? JSON.stringify(uploadData, null, 2) : 'Not available'
             });
 
             // If it's a validation error, provide more details
@@ -432,6 +438,51 @@ class UploadService {
             }
             logger.error('Error updating upload metadata', { error: error.message });
             throw ErrorResponse.internal('Error updating upload');
+        }
+    }
+
+    /**
+     * Get file information for download and increment counter
+     * @param {string} uploadId - Upload ID
+     * @returns {Object} Download information (filePath, originalName)
+     */
+    static async getDownloadInfo(uploadId) {
+        try {
+            const upload = await Upload.findById(uploadId);
+
+            if (!upload) {
+                throw ErrorResponse.notFound('Upload not found', 'UPLOAD_NOT_FOUND');
+            }
+
+            // Get absolute file path
+            // upload.url is like /uploads/user/date/file.ext
+            // We need to resolve this against the storage root
+            const relativePath = upload.url.replace('/uploads/', '');
+            const uploadRoot = path.resolve(process.env.UPLOAD_PATH || './uploads');
+            const filePath = path.join(uploadRoot, relativePath);
+
+            // Verify file exists
+            try {
+                await fs.access(filePath);
+            } catch {
+                logger.error('File not found on disk', { path: filePath, uploadId });
+                throw ErrorResponse.notFound('Archivo físico no encontrado', 'FILE_NOT_FOUND');
+            }
+
+            // Increment downloads
+            await this.incrementDownloads(uploadId);
+
+            return {
+                filePath,
+                originalName: upload.originalName,
+                mimetype: upload.mimetype
+            };
+        } catch (error) {
+            if (error instanceof ErrorResponse) {
+                throw error;
+            }
+            logger.error('Error getting download info', { error: error.message, uploadId });
+            throw ErrorResponse.internal('Error al preparar la descarga');
         }
     }
 

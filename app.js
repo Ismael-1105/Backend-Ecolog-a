@@ -222,8 +222,13 @@ if (process.env.NODE_ENV === 'production') {
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Static: serve uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Static: serve uploads from configured path
+const uploadDir = process.env.UPLOAD_PATH || path.join(__dirname, 'uploads');
+app.use('/uploads', express.static(path.resolve(uploadDir)));
+
+// Static: serve storage directory (for profile pictures and other files)
+const storageDir = path.join(__dirname, 'storage');
+app.use('/storage', express.static(path.resolve(storageDir)));
 
 // Swagger UI (optional - only if swagger-output.json exists)
 if (swaggerUi && swaggerFile) {

@@ -27,10 +27,8 @@ const ensureDirectoryExists = (dirPath) => {
 
 const profilePictureStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        const uploadPath = path.join(
-            process.env.UPLOAD_PATH || './storage',
-            'profile-pictures'
-        );
+        // Use storage root for profile pictures, not UPLOAD_PATH (which is for videos)
+        const uploadPath = path.join('./storage', 'profile-pictures');
         ensureDirectoryExists(uploadPath);
         cb(null, uploadPath);
     },

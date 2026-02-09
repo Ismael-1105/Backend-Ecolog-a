@@ -71,7 +71,7 @@ const BadgeSchema = new mongoose.Schema({
 });
 
 // Indexes
-BadgeSchema.index({ slug: 1 });
+// Note: slug already has unique index from schema definition
 BadgeSchema.index({ isActive: 1, order: 1 });
 BadgeSchema.index({ 'criteria.type': 1, 'criteria.condition': 1 });
 

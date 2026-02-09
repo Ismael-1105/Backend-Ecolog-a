@@ -134,8 +134,18 @@ UserSchema.virtual('badgeCount').get(function () {
   return this.badges ? this.badges.length : 0;
 });
 
-// Ensure virtuals are included in JSON
-UserSchema.set('toJSON', { virtuals: true });
+// Ensure virtuals are included in JSON and transform profilePicture to full URL
+UserSchema.set('toJSON', {
+  virtuals: true,
+  transform: function (doc, ret) {
+    // Transform profilePicture path to full URL
+    if (ret.profilePicture && !ret.profilePicture.startsWith('http')) {
+      const baseUrl = process.env.BASE_URL || 'http://localhost:8080';
+      ret.profilePicture = `${baseUrl}/${ret.profilePicture}`;
+    }
+    return ret;
+  }
+});
 UserSchema.set('toObject', { virtuals: true });
 
 // Indexes for better query performance

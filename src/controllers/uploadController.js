@@ -306,3 +306,23 @@ exports.incrementDownloads = asyncHandler(async (req, res, next) => {
         },
     });
 });
+/**
+ * @route   GET /api/uploads/download/:id
+ * @desc    Download a file
+ * @access  Private
+ */
+exports.downloadFile = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+
+    const { filePath, originalName } = await UploadService.getDownloadInfo(id);
+
+    res.download(filePath, originalName, (err) => {
+        if (err) {
+            if (res.headersSent) {
+                // Background error after headers were sent
+                return;
+            }
+            return next(new ErrorResponse('Error al descargar el archivo', 500));
+        }
+    });
+});
