@@ -153,7 +153,9 @@ const likePost = asyncHandler(async (req, res) => {
     success: true,
     message: result.liked ? 'Post liked' : 'Post unliked',
     data: {
-      likeCount: result.likeCount
+      liked: result.liked,
+      likeCount: result.likeCount,
+      dislikeCount: result.post.dislikes ? result.post.dislikes.length : 0
     }
   });
 });
@@ -189,7 +191,9 @@ const dislikePost = asyncHandler(async (req, res) => {
     success: true,
     message: result.disliked ? 'Post disliked' : 'Post un-disliked',
     data: {
-      dislikeCount: result.dislikeCount
+      disliked: result.disliked,
+      dislikeCount: result.dislikeCount,
+      likeCount: result.post.likes ? result.post.likes.length : 0
     }
   });
 });
