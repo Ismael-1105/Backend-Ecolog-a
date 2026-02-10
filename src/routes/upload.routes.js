@@ -95,7 +95,7 @@ router.get('/:filename', uploadController.getFileInfo);
  * @desc    Delete an uploaded file
  * @access  Private
  */
-router.delete('/:filename', uploadController.deleteFile);
+router.delete('/:id', uploadController.deleteFile);
 
 module.exports = router;
 

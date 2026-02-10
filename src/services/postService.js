@@ -181,7 +181,7 @@ class PostService {
 
             // Check authorization
             const isAuthor = post.author && post.author.toString() === userId;
-            const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+            const isAdmin = userRole === 'Administrador' || userRole === 'SuperAdmin';
 
             if (!isAuthor && !isAdmin) {
                 throw ErrorResponse.forbidden(
@@ -234,7 +234,7 @@ class PostService {
 
             // Check authorization
             const isAuthor = post.author && post.author.toString() === userId;
-            const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+            const isAdmin = userRole === 'Administrador' || userRole === 'SuperAdmin';
 
             if (!isAuthor && !isAdmin) {
                 throw ErrorResponse.forbidden(

@@ -24,9 +24,9 @@ const registerUser = async (userData, deviceInfo = {}) => {
         throw ErrorResponse.conflict('Email already registered', 'EMAIL_EXISTS');
     }
 
-    // Prevent registration as admin roles
-    if (role && (role === 'Administrador' || role === 'SuperAdmin')) {
-        throw ErrorResponse.forbidden('Cannot register as admin role', 'INVALID_ROLE');
+    // Prevent registration as SuperAdmin role only (Admin is now allowed for setup)
+    if (role && role === 'SuperAdmin') {
+        throw ErrorResponse.forbidden('Cannot register as superadmin role', 'INVALID_ROLE');
     }
 
     // Hash password with dynamic salt

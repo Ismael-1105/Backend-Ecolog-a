@@ -51,7 +51,7 @@ const registerValidator = [
 
     body('role')
         .optional()
-        .isIn(['Estudiante', 'Docente']).withMessage('Invalid role. Must be Estudiante or Docente'),
+        .isIn(['Estudiante', 'Docente', 'Administrador']).withMessage('Invalid role. Must be Estudiante, Docente, or Administrador'),
 
     validate
 ];

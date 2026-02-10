@@ -407,7 +407,7 @@ class UploadService {
      * @param {string} userId - User ID (for authorization)
      * @returns {Object} Updated upload
      */
-    static async updateUploadMetadata(uploadId, updates, userId) {
+    static async updateUploadMetadata(uploadId, updates, userId, userRole) {
         try {
             const upload = await Upload.findById(uploadId);
 
@@ -415,8 +415,8 @@ class UploadService {
                 throw ErrorResponse.notFound('Upload not found', 'UPLOAD_NOT_FOUND');
             }
 
-            // Check if user owns the upload
-            if (upload.uploadedBy.toString() !== userId) {
+            // Check if user owns the upload or is Admin
+            if (upload.uploadedBy.toString() !== userId && userRole !== 'Administrador' && userRole !== 'SuperAdmin') {
                 throw ErrorResponse.forbidden('Not authorized to update this upload', 'NOT_AUTHORIZED');
             }
 
@@ -518,7 +518,7 @@ class UploadService {
      * @param {string} userId - User ID (for authorization)
      * @returns {boolean} Success status
      */
-    static async deleteUpload(uploadId, userId) {
+    static async deleteUpload(uploadId, userId, userRole) {
         try {
             const upload = await Upload.findById(uploadId);
 
@@ -526,13 +526,33 @@ class UploadService {
                 throw ErrorResponse.notFound('Upload not found', 'UPLOAD_NOT_FOUND');
             }
 
-            // Check if user owns the upload
-            if (upload.uploadedBy.toString() !== userId) {
+            // Check if user owns the upload or is Admin
+            if (upload.uploadedBy.toString() !== userId && userRole !== 'Administrador' && userRole !== 'SuperAdmin') {
                 throw ErrorResponse.forbidden('Not authorized to delete this upload', 'NOT_AUTHORIZED');
             }
 
             // Delete file from filesystem
-            await this.deleteFile(upload.url.replace(/^\//, ''));
+            // URL is /uploads/path/to/file
+            // We need to convert it to actual file path using UPLOAD_PATH
+            const relativePath = upload.url.replace(/^\/uploads\//, '');
+            const uploadPath = process.env.UPLOAD_PATH || './uploads';
+            const fullPath = path.join(uploadPath, relativePath);
+
+            try {
+                await this.deleteFile(fullPath);
+            } catch (error) {
+                // If file not found, log warning but proceed to delete from DB
+                // This prevents "zombie" records that can't be deleted
+                if (error.statusCode === 404) {
+                    logger.warn('Physical file not found during deletion, removing DB record anyway', {
+                        uploadId,
+                        path: fullPath
+                    });
+                } else {
+                    // Re-throw other errors (e.g. permission issues)
+                    throw error;
+                }
+            }
 
             // Delete database record
             await Upload.findByIdAndDelete(uploadId);

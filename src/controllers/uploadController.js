@@ -84,27 +84,24 @@ exports.uploadMultipleFiles = asyncHandler(async (req, res, next) => {
  * @access  Private
  */
 exports.deleteFile = asyncHandler(async (req, res, next) => {
-    const { filename } = req.params;
+    const { id } = req.params;
 
-    if (!filename) {
+    if (!id) {
         return res.status(400).json({
             success: false,
-            error: 'Filename is required',
-            code: 'NO_FILENAME'
+            error: 'Upload ID is required',
+            code: 'NO_UPLOAD_ID'
         });
     }
 
-    // Get file info to verify it exists and belongs to user
-    const fileInfo = await UploadService.getFileInfo(filename, req.user.id);
-
-    // Delete the file
-    await UploadService.deleteFile(fileInfo.path);
+    // Delegate to service which handles auth check (ownership/admin), file deletion, and DB deletion
+    await UploadService.deleteUpload(id, req.user.id, req.user.role);
 
     res.status(200).json({
         success: true,
         message: 'File deleted successfully',
         data: {
-            filename,
+            id,
         },
     });
 });
@@ -125,7 +122,10 @@ exports.getFileInfo = asyncHandler(async (req, res, next) => {
         });
     }
 
-    const fileInfo = await UploadService.getFileInfo(filename, req.user.id);
+    // Admins can see any file info, others only their own
+    const userIdFilter = (req.user.role === 'Administrador' || req.user.role === 'SuperAdmin') ? null : req.user.id;
+
+    const fileInfo = await UploadService.getFileInfo(filename, userIdFilter);
 
     res.status(200).json({
         success: true,
@@ -279,7 +279,8 @@ exports.updateUploadMetadata = asyncHandler(async (req, res, next) => {
     const upload = await UploadService.updateUploadMetadata(
         id,
         { title, description, category },
-        req.user.id
+        req.user.id,
+        req.user.role
     );
 
     res.status(200).json({

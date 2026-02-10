@@ -15,7 +15,18 @@ const PostSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Category is required'],
-    enum: ['Reciclaje', 'Cambio Climático', 'Energías Renovables', 'Educación Ambiental', 'Problemas Locales', 'General']
+    enum: [
+      'Reciclaje',
+      'Cambio Climático',
+      'Energías Renovables',
+      'Educación Ambiental',
+      'Problemas Locales',
+      'General',
+      'Flora Nativa',
+      'Fauna Local',
+      'Conservación',
+      'Agua'
+    ]
   },
   author: {
     type: mongoose.Schema.Types.ObjectId,
