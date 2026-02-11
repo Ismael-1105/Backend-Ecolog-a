@@ -29,6 +29,8 @@ const sanitizeFilename = (filename) => {
     return sanitized;
 };
 
+const DOCUMENT_MAX_SIZE = parseInt(process.env.MAX_DOCUMENT_SIZE, 10) || 100 * 1024 * 1024; // 100MB default
+
 // File type configurations
 const FILE_TYPES = {
     image: {
@@ -44,7 +46,7 @@ const FILE_TYPES = {
     document: {
         mimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
         extensions: ['.pdf', '.doc', '.docx', '.txt'],
-        maxSize: 10 * 1024 * 1024, // 10MB
+        maxSize: DOCUMENT_MAX_SIZE,
     },
     audio: {
         mimeTypes: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm'],
@@ -195,10 +197,10 @@ const uploadMiddlewares = {
         fieldName: 'video'
     }),
 
-    // Single document upload (max 10MB)
+    // Single document upload (max configurable via MAX_DOCUMENT_SIZE; default 100MB)
     singleDocument: createUploadMiddleware({
         allowedTypes: 'document',
-        maxSize: 10 * 1024 * 1024,
+        maxSize: FILE_TYPES.document.maxSize,
         fieldName: 'document'
     }),
 

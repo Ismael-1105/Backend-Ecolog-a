@@ -43,7 +43,7 @@ router.post('/video', uploadMiddlewares.singleVideo, multerErrorHandler, uploadC
 
 /**
  * @route   POST /api/uploads/document
- * @desc    Upload a document file (max 10MB)
+ * @desc    Upload a document file (max configurable via MAX_DOCUMENT_SIZE, default 100MB)
  * @access  Private
  */
 router.post('/document', uploadMiddlewares.singleDocument, multerErrorHandler, uploadController.uploadDocument);
