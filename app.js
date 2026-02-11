@@ -6,7 +6,6 @@ const path = require('path');
 const fs = require('fs');
 const logger = require('./src/config/logger');
 const { requestIdMiddleware, httpLogger, httpLoggerWithErrors } = require('./src/middlewares/httpLogger');
-const { apiLimiter } = require('./src/middlewares/rateLimiter');
 const { mongoSanitizeMiddleware, xssMiddleware } = require('./src/middlewares/sanitize');
 const { performanceMonitor, memoryMonitor } = require('./src/middlewares/performanceMonitor');
 
@@ -194,13 +193,7 @@ if (process.env.ENABLE_HTTP_LOGGING !== 'false') {
   logger.warn('HTTP request logging disabled');
 }
 
-// Rate limiting - Apply to all API routes
-if (process.env.NODE_ENV === 'production') {
-  app.use('/api', apiLimiter);
-  logger.info('Rate limiting enabled for production');
-} else {
-  logger.warn('Rate limiting disabled for development');
-}
+logger.warn('IP rate limiting is disabled');
 
 // Body parser
 app.use(express.json({ limit: '10mb' }));

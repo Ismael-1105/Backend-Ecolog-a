@@ -9,7 +9,6 @@ const {
   changePassword,
 } = require('../controllers/authController');
 const auth = require('../middlewares/auth');
-const { loginLimiter, registerLimiter } = require('../middlewares/rateLimiter');
 const {
   registerValidator,
   loginValidator,
@@ -22,7 +21,6 @@ const {
 // @access  Public
 router.post(
   '/register',
-  registerLimiter, // Enable rate limiting for registration
   registerValidator,
   registerUser
 );
@@ -32,7 +30,6 @@ router.post(
 // @access  Public
 router.post(
   '/login',
-  loginLimiter, // Enable rate limiting for login
   loginValidator,
   loginUser
 );
